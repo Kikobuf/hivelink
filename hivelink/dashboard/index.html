@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HiveLink</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #080b0f;
+  --surface:   #0d1117;
+  --surface2:  #161b22;
+  --surface3:  #1c2330;
+  --border:    #21262d;
+  --border2:   #30363d;
+  --text:      #e6edf3;
+  --muted:     #7d8590;
+  --muted2:    #484f58;
+  --accent:    #2f81f7;
+  --accent-dim:#1f6feb22;
+  --green:     #3fb950;
+  --amber:     #d29922;
+  --red:       #f85149;
+  --purple:    #bc8cff;
+  --cuda:      #76b900;
+  --metal:     #a8b3c4;
+  --rocm:      #e8534f;
+  --cpu:       #58a6ff;
+  --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
+  --r: 6px;
+}
+
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif; font-size:13px; line-height:1.5; min-height:100vh; }
+
+/* Header */
+.header { position:sticky; top:0; z-index:200; display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:52px; background:var(--surface); border-bottom:1px solid var(--border); }
+.logo { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:600; letter-spacing:-0.02em; user-select:none; }
+.logo-hex { width:26px; height:26px; background:var(--accent); clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); display:flex; align-items:center; justify-content:center; }
+.logo-hex svg { width:13px; height:13px; fill:#fff; }
+.header-right { display:flex; align-items:center; gap:14px; }
+.hstat { display:flex; align-items:baseline; gap:4px; }
+.hstat-val { font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
+.hstat-lbl { font-size:10px; color:var(--muted); }
+.header-stats { display:flex; gap:16px; align-items:center; }
+.conn-pill { display:flex; align-items:center; gap:6px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--muted); }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--muted2); transition:background 0.3s; }
+.dot.live { background:var(--green); animation:blink 2.5s infinite; }
+.dot.error { background:var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+/* Layout */
+.layout { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 52px); }
+
+/* Sidebar */
+.sidebar { background:var(--surface); border-right:1px solid var(--border); padding:12px 0; position:sticky; top:52px; height:calc(100vh - 52px); overflow-y:auto; }
+.nav-item { display:flex; align-items:center; gap:9px; padding:7px 16px; cursor:pointer; color:var(--muted); font-size:13px; border-left:2px solid transparent; transition:all 0.15s; }
+.nav-item:hover { color:var(--text); background:var(--surface2); }
+.nav-item.active { color:var(--text); background:var(--accent-dim); border-left-color:var(--accent); }
+.nav-icon { width:15px; text-align:center; font-size:13px; flex-shrink:0; }
+.sidebar-sep { height:1px; background:var(--border); margin:8px 16px; }
+.sidebar-stats { padding:10px 16px 0; }
+.sstat { padding:8px 0; border-bottom:1px solid var(--border); }
+.sstat:last-child { border-bottom:none; }
+.sstat-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.sstat-value { font-size:18px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+.sstat-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+
+/* Main */
+.main { overflow:auto; }
+.page { display:none; padding:24px; }
+.page.active { display:block; }
+.page-header { margin-bottom:20px; }
+.page-title { font-size:16px; font-weight:600; letter-spacing:-0.01em; }
+.page-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; }
+.card-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+
+/* Node table */
+.node-table { width:100%; border-collapse:collapse; }
+.node-table th { text-align:left; padding:8px 16px; font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border); background:var(--surface2); }
+.node-table td { padding:11px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.node-table tr:last-child td { border-bottom:none; }
+.node-table tr:hover td { background:var(--surface2); }
+.node-name-cell { display:flex; align-items:center; gap:10px; }
+.node-avatar { width:32px; height:32px; border-radius:6px; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.node-id-text { font-family:var(--mono); font-size:11px; color:var(--text); }
+.node-hostname { font-size:10px; color:var(--muted); margin-top:1px; }
+
+/* Badges */
+.badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.04em; font-family:var(--mono); }
+.badge-cuda   { background:#76b90018; color:var(--cuda);  border:1px solid #76b90044; }
+.badge-metal  { background:#a8b3c418; color:var(--metal); border:1px solid #a8b3c444; }
+.badge-rocm   { background:#e8534f18; color:var(--rocm);  border:1px solid #e8534f44; }
+.badge-cpu    { background:#58a6ff18; color:var(--cpu);   border:1px solid #58a6ff44; }
+.badge-vulkan { background:#bc8cff18; color:var(--purple);border:1px solid #bc8cff44; }
+.badge-self   { background:var(--accent-dim); color:var(--accent); border:1px solid #2f81f744; font-family:inherit; font-size:9px; letter-spacing:0.06em; }
+
+/* Memory bar */
+.mem-bar { display:flex; align-items:center; gap:8px; }
+.mem-track { flex:1; height:4px; background:var(--surface3); border-radius:2px; overflow:hidden; }
+.mem-fill { height:100%; background:var(--accent); border-radius:2px; transition:width 0.5s; }
+.mem-text { font-family:var(--mono); font-size:11px; color:var(--text); min-width:50px; }
+.tflops-text { font-family:var(--mono); font-size:12px; color:var(--text); }
+
+/* Empty */
+.empty { display:flex; flex-direction:column; align-items:center; padding:48px 24px; gap:8px; color:var(--muted); }
+.empty-icon { font-size:28px; margin-bottom:4px; }
+.empty-title { font-size:14px; font-weight:500; color:var(--text); }
+.empty-sub { font-size:12px; text-align:center; line-height:1.6; }
+.empty code { background:var(--surface2); padding:1px 5px; border-radius:3px; font-family:var(--mono); font-size:11px; color:var(--accent); }
+
+/* Models grid */
+.models-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+.model-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; cursor:pointer; transition:border-color 0.15s,background 0.15s; }
+.model-card:hover { border-color:var(--border2); background:var(--surface2); }
+.model-card.selected { border-color:var(--accent); }
+.model-name { font-size:13px; font-weight:600; color:var(--text); }
+.model-params { font-size:11px; color:var(--muted); margin-top:2px; }
+.model-bar { height:3px; background:var(--surface3); border-radius:2px; overflow:hidden; margin:10px 0 8px; }
+.model-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--purple)); border-radius:2px; }
+.model-footer { display:flex; align-items:center; justify-content:space-between; }
+.model-size { font-size:10px; color:var(--muted); font-family:var(--mono); }
+.quant-pill { display:inline-block; padding:1px 6px; background:var(--surface3); border:1px solid var(--border2); border-radius:3px; font-size:10px; font-family:var(--mono); color:var(--muted); }
+
+/* Layer plan */
+.layer-assignment { margin-bottom:12px; }
+.layer-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+.layer-node-id { font-family:var(--mono); font-size:11px; color:var(--text); }
+.layer-range { font-family:var(--mono); font-size:10px; color:var(--muted); }
+.layer-track { height:28px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; overflow:hidden; position:relative; }
+.layer-fill { height:100%; position:absolute; top:0; display:flex; align-items:center; padding:0 8px; font-size:10px; font-family:var(--mono); font-weight:600; white-space:nowrap; transition:width 0.6s cubic-bezier(.34,1.2,.64,1); }
+.layer-stats { display:flex; gap:12px; margin-top:5px; font-size:10px; color:var(--muted); align-items:center; }
+
+/* Chat page */
+.chat-wrap { display:flex; flex-direction:column; height:calc(100vh - 52px - 48px - 48px); min-height:400px; }
+.chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+.chat-bubble { max-width:80%; padding:10px 14px; border-radius:10px; font-size:13px; line-height:1.6; }
+.chat-bubble.user { align-self:flex-end; background:var(--accent); color:#fff; border-radius:10px 10px 2px 10px; }
+.chat-bubble.assistant { align-self:flex-start; background:var(--surface2); border:1px solid var(--border); border-radius:10px 10px 10px 2px; }
+.chat-bubble.assistant.thinking { color:var(--muted); font-style:italic; }
+.chat-bubble pre { background:var(--surface3); border-radius:4px; padding:8px 10px; overflow-x:auto; margin-top:6px; font-size:11px; font-family:var(--mono); }
+.chat-bubble code { font-family:var(--mono); font-size:11px; background:var(--surface3); padding:1px 4px; border-radius:3px; }
+.chat-bubble pre code { background:none; padding:0; }
+.chat-input-row { display:flex; gap:8px; padding:12px 20px; border-top:1px solid var(--border); background:var(--surface); }
+.chat-input { flex:1; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); padding:9px 12px; color:var(--text); font-size:13px; font-family:inherit; resize:none; min-height:40px; max-height:120px; outline:none; transition:border-color 0.15s; }
+.chat-input:focus { border-color:var(--accent); }
+.chat-input::placeholder { color:var(--muted); }
+.chat-send { padding:9px 16px; background:var(--accent); color:#fff; border:none; border-radius:var(--r); font-size:13px; font-weight:500; cursor:pointer; transition:opacity 0.15s; flex-shrink:0; }
+.chat-send:hover { opacity:0.85; }
+.chat-send:disabled { opacity:0.4; cursor:default; }
+.chat-model-select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); color:var(--text); font-size:12px; padding:4px 8px; cursor:pointer; }
+.chat-toolbar { display:flex; align-items:center; gap:10px; padding:8px 20px; border-bottom:1px solid var(--border); background:var(--surface2); }
+.chat-toolbar-label { font-size:11px; color:var(--muted); }
+.chat-clear { padding:3px 10px; background:transparent; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; }
+.chat-clear:hover { color:var(--text); border-color:var(--border2); }
+.no-model-warn { background:var(--amber)18; border:1px solid var(--amber)44; border-radius:var(--r); padding:10px 14px; font-size:12px; color:var(--amber); margin:12px 20px 0; }
+
+/* API & Install */
+.code-block { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; font-family:var(--mono); font-size:11px; color:var(--text); overflow-x:auto; white-space:pre; }
+.code-block .comment { color:var(--muted); }
+.code-block .cmd { color:var(--green); }
+.code-block .flag { color:var(--amber); }
+.api-box { font-family:var(--mono); font-size:12px; }
+.api-row { display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid var(--border); }
+.api-row:last-child { border-bottom:none; }
+.api-method { color:var(--green); font-size:10px; font-weight:700; width:34px; flex-shrink:0; }
+.api-path { color:var(--accent); flex:1; }
+.api-desc { color:var(--muted); font-size:10px; }
+.copy-btn { padding:3px 10px; background:var(--surface3); border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; transition:all 0.15s; }
+.copy-btn:hover { color:var(--text); }
+.copy-btn.copied { color:var(--green); border-color:var(--green)44; }
+.install-step { border-left:2px solid var(--border2); padding:0 0 22px 20px; position:relative; margin-left:16px; }
+.install-step:last-child { padding-bottom:0; border-left-color:transparent; }
+.step-num { position:absolute; left:-12px; top:0; width:22px; height:22px; border-radius:50%; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--muted); }
+.step-title { font-size:13px; font-weight:600; margin-bottom:6px; padding-top:1px; }
+.step-desc { font-size:12px; color:var(--muted); margin-bottom:10px; line-height:1.6; }
+
+@media(max-width:768px) {
+  .layout { grid-template-columns:1fr; }
+  .sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); }
+  .header-stats { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-hex"><svg viewBox="0 0 14 14"><path d="M7 1L13 4.5v5L7 13 1 9.5v-5z"/></svg></div>
+    HiveLink
+  </div>
+  <div class="header-right">
+    <div class="header-stats">
+      <div class="hstat"><span class="hstat-val" id="hs-nodes">—</span><span class="hstat-lbl">nodes</span></div>
+      <div class="hstat"><span class="hstat-val" id="hs-mem">—</span><span class="hstat-lbl">memory</span></div>
+      <div class="hstat"><span class="hstat-val" id="hs-tflops">—</span><span class="hstat-lbl">TFLOPS</span></div>
+    </div>
+    <div class="conn-pill"><div class="dot" id="conn-dot"></div><span id="conn-label">connecting</span></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-item active" data-page="cluster"><span class="nav-icon">⬡</span> Cluster</div>
+    <div class="nav-item" data-page="models"><span class="nav-icon">◈</span> Models</div>
+    <div class="nav-item" data-page="chat"><span class="nav-icon">◻</span> Chat</div>
+    <div class="nav-item" data-page="api"><span class="nav-icon">⇌</span> API</div>
+    <div class="nav-item" data-page="install"><span class="nav-icon">↓</span> Setup</div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-stats">
+      <div class="sstat"><div class="sstat-label">Nodes online</div><div class="sstat-value" id="ss-nodes">—</div></div>
+      <div class="sstat"><div class="sstat-label">Total memory</div><div class="sstat-value" id="ss-mem">—</div><div class="sstat-sub" id="ss-mem-sub"></div></div>
+      <div class="sstat"><div class="sstat-label">TFLOPS</div><div class="sstat-value" id="ss-tflops">—</div></div>
+      <div class="sstat"><div class="sstat-label">Largest model (Q4)</div><div class="sstat-value" id="ss-maxmodel">—</div></div>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- Cluster -->
+    <div class="page active" id="page-cluster">
+      <div class="page-header"><div class="page-title">Cluster nodes</div><div class="page-sub">Devices discovered automatically via UDP broadcast on your LAN</div></div>
+      <div class="card">
+        <table class="node-table">
+          <thead><tr><th>Node</th><th>Backend</th><th style="width:200px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
+          <tbody id="node-tbody">
+            <tr><td colspan="5"><div class="empty"><div class="empty-icon">⬡</div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Models -->
+    <div class="page" id="page-models">
+      <div class="page-header"><div class="page-title">Available models</div><div class="page-sub">Models your cluster can run — click one to see the layer distribution plan</div></div>
+      <div class="models-grid" id="models-grid">
+        <div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models yet</div><div class="empty-sub">Connect nodes with enough combined memory</div></div>
+      </div>
+      <div id="plan-container" style="display:none;margin-top:20px">
+        <div class="card">
+          <div class="card-header"><span id="plan-title">Layer distribution</span></div>
+          <div style="padding:16px"><div class="plan-meta" id="plan-meta" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div><div id="plan-assignments"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="page" id="page-chat">
+      <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Talk to your cluster — responses stream directly from your local models</div></div>
+      <div class="card" style="display:flex;flex-direction:column;min-height:500px">
+        <div class="chat-toolbar">
+          <span class="chat-toolbar-label">Model</span>
+          <select class="chat-model-select" id="chat-model-select"><option value="">— select model —</option></select>
+          <button class="chat-clear" onclick="clearChat()">Clear</button>
+        </div>
+        <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above, or go to Models to see what your cluster can run.</div>
+        <div class="chat-messages" id="chat-messages">
+          <div style="text-align:center;color:var(--muted);font-size:12px;margin:auto">Select a model above and start chatting</div>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
+          <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- API -->
+    <div class="page" id="page-api">
+      <div class="page-header"><div class="page-title">OpenAI-compatible API</div><div class="page-sub">Drop-in replacement — works with any client that supports the OpenAI API</div></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">Base URL</div>
+        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+          <code style="font-family:var(--mono);font-size:13px;color:var(--accent)" id="api-base-url"></code>
+          <button class="copy-btn" id="copy-url-btn" onclick="copyUrl()">Copy</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">Endpoints</div>
+        <div style="padding:14px 16px">
+          <div class="api-box">
+            <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Chat inference — streams SSE</span></div>
+            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/v1/models</span><span class="api-desc">List available models</span></div>
+            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/cluster</span><span class="api-desc">Cluster status + all peer info</span></div>
+            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/hardware</span><span class="api-desc">This node's hardware profile</span></div>
+            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer distribution plan</span></div>
+            <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live cluster updates (used by this dashboard)</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Example — Python (openai SDK)</div>
+        <div style="padding:14px 16px">
+          <div class="code-block" id="api-code-example"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Install -->
+    <div class="page" id="page-install">
+      <div class="page-header"><div class="page-title">Setup guide</div><div class="page-sub">Install HiveLink on every machine you want in the cluster — same steps on all platforms</div></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">Installation</div>
+        <div style="padding:20px 24px">
+          <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node. Python 3.12 recommended.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
+          <div class="install-step"><div class="step-num">2</div><div class="step-title">Install HiveLink</div><div class="step-desc">Same command on Windows, Linux, and macOS.</div>
+<div class="code-block"><span class="cmd">pip install hivelink</span>
+
+<span class="comment"># NVIDIA GPU support</span>
+<span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
+
+<span class="comment"># AMD GPU support</span>
+<span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
+          <div class="install-step"><div class="step-num">3</div><div class="step-title">Install llama.cpp</div><div class="step-desc">Downloads the prebuilt llama-server binary for your platform.</div><div class="code-block"><span class="cmd">hivelink install-llama</span></div></div>
+          <div class="install-step"><div class="step-num">4</div><div class="step-title">Start on every machine</div><div class="step-desc">Run this on each device — they discover each other automatically within a few seconds. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
+          <div class="install-step"><div class="step-num">5</div><div class="step-title">Download a model and run it</div><div class="step-desc">Models from Ollama, LM Studio, or Hugging Face all work — they're all GGUF format under the hood.</div>
+<div class="code-block"><span class="comment"># Download any GGUF model from Hugging Face</span>
+<span class="cmd">huggingface-cli download</span> bartowski/Llama-3.1-8B-Instruct-GGUF <span class="flag">\</span>
+  <span class="flag">--include</span> <span class="flag">"Llama-3.1-8B-Instruct-Q4_K_M.gguf"</span>
+
+<span class="comment"># Or use a model Ollama already downloaded</span>
+<span class="comment"># Ollama stores GGUF files at: ~/.ollama/models/blobs/</span>
+
+<span class="comment"># Start llama-server with your model</span>
+<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Compatible model sources</div>
+        <div style="padding:14px 16px">
+          <table class="node-table">
+            <thead><tr><th>Source</th><th>Format</th><th>Works?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Hugging Face Hub</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">Best selection, use bartowski/ or lmstudio-community/</td></tr>
+              <tr><td>Ollama</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">~/.ollama/models/blobs/ — point llama-server there</td></tr>
+              <tr><td>LM Studio</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">~/.cache/lm-studio/models/</td></tr>
+              <tr><td>OpenAI API</td><td>API</td><td style="color:var(--muted)">— N/A</td><td style="color:var(--muted);font-size:11px">Cloud only, cannot distribute</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const API_BASE = `${location.protocol}//${location.hostname}:47730`;
+const WS_BASE  = `ws://${location.hostname}:47730`;
+
+// Set dynamic API URL in UI
+document.getElementById('api-base-url').textContent = API_BASE;
+document.getElementById('api-code-example').innerHTML =
+`<span class="comment"># pip install openai</span>
+<span class="cmd">from</span> openai <span class="cmd">import</span> OpenAI
+
+client = OpenAI(
+    base_url=<span class="flag">"${API_BASE}/v1"</span>,
+    api_key=<span class="flag">"hivelink"</span>,  <span class="comment"># any value</span>
+)
+
+response = client.chat.completions.create(
+    model=<span class="flag">"llama3-8b"</span>,
+    messages=[{<span class="flag">"role"</span>: <span class="flag">"user"</span>, <span class="flag">"content"</span>: <span class="flag">"Hello!"</span>}],
+    stream=<span class="cmd">True</span>,
+)
+<span class="cmd">for</span> chunk <span class="cmd">in</span> response:
+    <span class="cmd">print</span>(chunk.choices[0].delta.content or <span class="flag">""</span>, end=<span class="flag">""</span>)`;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let peers = [], models = [], ws = null, selectedModel = null;
+let chatHistory = [], chatStreaming = false;
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + item.dataset.page).classList.add('active');
+  });
+});
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+function connect() {
+  ws = new WebSocket(`${WS_BASE}/ws/cluster`);
+  ws.onopen  = () => setConn('live', 'live');
+  ws.onclose = () => { setConn('error', 'offline'); setTimeout(connect, 3000); };
+  ws.onerror = () => setConn('error', 'error');
+  ws.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'cluster_update') {
+        peers = msg.peers || [];
+        renderCluster(); updateSidebar(); updateHeaderStats(); fetchModels();
+      }
+    } catch(_) {}
+  };
+}
+
+function setConn(cls, label) {
+  document.getElementById('conn-dot').className = 'dot ' + cls;
+  document.getElementById('conn-label').textContent = label;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const osEmoji  = os  => ({darwin:'🍎',linux:'🐧',windows:'🪟'}[os] || '💻');
+const fmtMem   = mb  => !mb ? '0' : mb >= 1024 ? (mb/1024).toFixed(1)+' GB' : mb+' MB';
+const backBadge = b  => `<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
+const COLORS = ['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
+
+// ── Cluster ──────────────────────────────────────────────────────────────────
+function renderCluster() {
+  const tbody = document.getElementById('node-tbody');
+  if (!peers.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">⬡</div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine on your LAN</div></div></td></tr>`;
+    return;
+  }
+  const sorted = [...peers].sort((a,b) => {
+    if (a.is_self && !b.is_self) return -1;
+    if (!a.is_self && b.is_self) return 1;
+    return (b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
+  });
+  const totalMem = sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  tbody.innerHTML = sorted.map(p => {
+    const hw = p.hardware||{};
+    const mem = hw.total_vram_mb||hw.ram_mb||0;
+    const pct = totalMem>0 ? Math.round(mem/totalMem*100) : 0;
+    const backend = hw.primary_backend||'cpu';
+    const gpus = (hw.gpus||[]).map(g=>g.name).join(', ')||'—';
+    const nid = (p.node_id||'').slice(0,12)+'…';
+    const self = p.is_self ? '<span class="badge badge-self" style="margin-left:5px">this node</span>' : '';
+    return `<tr>
+      <td><div class="node-name-cell">
+        <div class="node-avatar">${osEmoji(hw.node_os)}</div>
+        <div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+            <span class="node-id-text">${nid}</span>${self}
+          </div>
+          <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div>
+        </div>
+      </div></td>
+      <td>${backBadge(backend)}</td>
+      <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
+      <td><span class="tflops-text">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
+      <td style="color:var(--muted);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gpus}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Sidebar + header ─────────────────────────────────────────────────────────
+function updateSidebar() {
+  const totalMem    = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  const totalTflops = peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
+  const maxB = totalMem>0 ? Math.floor(totalMem*1024*1024*0.9/0.5/1e9) : 0;
+  const gpuN = peers.filter(p=>(p.hardware?.total_vram_mb||0)>0).length;
+  document.getElementById('ss-nodes').textContent   = peers.length||'—';
+  document.getElementById('ss-mem').textContent     = fmtMem(totalMem)||'—';
+  document.getElementById('ss-mem-sub').textContent = gpuN ? `across ${gpuN} GPU node(s)` : 'system RAM';
+  document.getElementById('ss-tflops').textContent  = totalTflops ? totalTflops.toFixed(1) : '—';
+  document.getElementById('ss-maxmodel').textContent= maxB>=1 ? maxB+'B params' : '—';
+}
+
+function updateHeaderStats() {
+  const totalMem    = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  const totalTflops = peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
+  document.getElementById('hs-nodes').textContent  = peers.length||'—';
+  document.getElementById('hs-mem').textContent    = fmtMem(totalMem)||'—';
+  document.getElementById('hs-tflops').textContent = totalTflops ? totalTflops.toFixed(1) : '—';
+}
+
+// ── Models ───────────────────────────────────────────────────────────────────
+async function fetchModels() {
+  try {
+    const res = await fetch(API_BASE+'/api/models');
+    const data = await res.json();
+    models = data.models||[];
+    renderModels();
+    updateChatModelSelect();
+  } catch(_) {}
+}
+
+function renderModels() {
+  const grid = document.getElementById('models-grid');
+  if (!models.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models available</div><div class="empty-sub">Connect nodes with enough combined memory</div></div>`;
+    return;
+  }
+  const totalMem = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  grid.innerHTML = models.map((m,i) => {
+    const sz = m.size_mb>=1024 ? (m.size_mb/1024).toFixed(1)+' GB' : m.size_mb+' MB';
+    const pct = totalMem>0 ? Math.min(100,Math.round(m.size_mb/totalMem*100)) : 50;
+    const color = COLORS[i%COLORS.length];
+    const sel = selectedModel===m.model_id ? ' selected' : '';
+    return `<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits})">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b}B parameters</div></div>
+        <span class="quant-pill">Q${m.quant_bits}</span>
+      </div>
+      <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers} layers</span></div>
+    </div>`;
+  }).join('');
+}
+
+async function selectModel(modelId, quantBits) {
+  selectedModel = modelId;
+  renderModels();
+  try {
+    const res = await fetch(`${API_BASE}/api/plan/${modelId}?quant_bits=${quantBits}`);
+    if (!res.ok) return;
+    renderPlan(await res.json());
+  } catch(_) {}
+}
+
+function renderPlan(plan) {
+  const container = document.getElementById('plan-container');
+  container.style.display = 'block';
+  document.getElementById('plan-title').textContent = `${plan.model_id} — layer distribution`;
+  document.getElementById('plan-meta').textContent  = `${plan.total_layers} layers · ${plan.total_params_b}B params · Q${plan.quant_bits} · ${plan.node_count} node(s)`;
+  document.getElementById('plan-assignments').innerHTML = (plan.assignments||[]).map((a,i) => {
+    const color = COLORS[i%COLORS.length];
+    const pct   = Math.round(a.layer_count/plan.total_layers*100);
+    const start = (a.layer_start/plan.total_layers*100).toFixed(1);
+    const peer  = peers.find(p=>p.node_id===a.node_id);
+    return `<div class="layer-assignment">
+      <div class="layer-header">
+        <span class="layer-node-id">${osEmoji(peer?.hardware?.node_os)} ${a.node_id.slice(0,10)}…</span>
+        <span class="layer-range">layers ${a.layer_start}–${a.layer_end} · ${a.layer_count} layers</span>
+      </div>
+      <div class="layer-track">
+        <div class="layer-fill" style="left:${start}%;width:${pct}%;background:${color}18;border-right:2px solid ${color};color:${color}">
+          ${pct}% · ${fmtMem(a.vram_mb)}
+        </div>
+      </div>
+      <div class="layer-stats">${backBadge(a.backend)}<span style="margin-left:4px">${a.api_url}</span></div>
+    </div>`;
+  }).join('');
+  container.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+function updateChatModelSelect() {
+  const sel = document.getElementById('chat-model-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— select model —</option>' +
+    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id} (Q${m.quant_bits})</option>`).join('');
+}
+
+function clearChat() {
+  chatHistory = [];
+  document.getElementById('chat-messages').innerHTML =
+    '<div style="text-align:center;color:var(--muted);font-size:12px;margin:auto">Select a model above and start chatting</div>';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatMessage(text) {
+  // Code blocks
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code)=>`<pre><code>${escapeHtml(code.trim())}</code></pre>`);
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, (_,c)=>`<code>${escapeHtml(c)}</code>`);
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  // Newlines
+  text = text.replace(/\n/g,'<br>');
+  return text;
+}
+
+function appendBubble(role, content, id) {
+  const msgs = document.getElementById('chat-messages');
+  // Remove placeholder
+  const placeholder = msgs.querySelector('[data-placeholder]');
+  if (placeholder) placeholder.remove();
+
+  const div = document.createElement('div');
+  div.className = `chat-bubble ${role}`;
+  if (id) div.id = id;
+  div.innerHTML = role === 'user' ? escapeHtml(content) : formatMessage(content);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendMessage() {
+  if (chatStreaming) return;
+  const input = document.getElementById('chat-input');
+  const modelSel = document.getElementById('chat-model-select');
+  const text = input.value.trim();
+  const model = modelSel.value;
+
+  if (!model) {
+    document.getElementById('no-model-warn').style.display = 'block';
+    return;
+  }
+  document.getElementById('no-model-warn').style.display = 'none';
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  chatHistory.push({role:'user', content:text});
+  appendBubble('user', text);
+
+  const replyId = 'reply-' + Date.now();
+  const replyDiv = appendBubble('assistant', '…', replyId);
+  replyDiv.classList.add('thinking');
+
+  chatStreaming = true;
+  document.getElementById('chat-send').disabled = true;
+
+  let fullText = '';
+  try {
+    const res = await fetch(`${API_BASE}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({model, messages: chatHistory, stream:true, max_tokens:1024}),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({detail:'Unknown error'}));
+      replyDiv.classList.remove('thinking');
+      replyDiv.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
+      chatStreaming = false;
+      document.getElementById('chat-send').disabled = false;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    replyDiv.classList.remove('thinking');
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const chunk = line.slice(6).trim();
+        if (chunk === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(chunk);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            replyDiv.innerHTML = formatMessage(fullText);
+            document.getElementById('chat-messages').scrollTop = 9999;
+          }
+        } catch(_) {}
+      }
+    }
+
+    chatHistory.push({role:'assistant', content:fullText});
+  } catch(e) {
+    replyDiv.classList.remove('thinking');
+    replyDiv.innerHTML = `<span style="color:var(--red)">Connection error — is llama-server running?</span>`;
+  }
+
+  chatStreaming = false;
+  document.getElementById('chat-send').disabled = false;
+}
+
+// Enter to send (Shift+Enter for newline)
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// Auto-resize textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ── Copy URL ─────────────────────────────────────────────────────────────────
+function copyUrl() {
+  navigator.clipboard.writeText(API_BASE).then(() => {
+    const btn = document.getElementById('copy-url-btn');
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+connect();
+setTimeout(() => {
+  if (!peers.length) {
+    fetch(API_BASE+'/api/cluster').then(r=>r.json()).then(d=>{
+      peers = d.peers||[];
+      renderCluster(); updateSidebar(); updateHeaderStats(); fetchModels();
+    }).catch(()=>{});
+  }
+}, 1200);
+</script>
+</body>
+</html>
