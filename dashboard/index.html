@@ -646,6 +646,16 @@ function cpuBrandHtml(name){
   if(n.includes('qualcomm')||n.includes('snapdragon')) return siImg('qualcomm','3253DC',14);
   return '<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
 }
+// Backend → provider logo (no badge box, just the brand icon)
+function backendProviderIcon(backend) {
+  switch(backend) {
+    case 'cuda':   return siImg('nvidia','76b900',18);
+    case 'metal':  return siImg('apple','a8b3c4',18);
+    case 'rocm':   return siImg('amd','e8534f',18);
+    case 'vulkan': return '<i class="fa-brands fa-vulkan" style="color:var(--purple);font-size:16px"></i>';
+    default:       return siImg('intel','0071c5',18);
+  }
+}
 
 // ── Model logos — real brand icons via simpleicons ────────────────────────────
 // Llama = Meta, Gemma = Google, others have their own slugs
@@ -800,7 +810,7 @@ function renderHardware(){
           <div><div class="hw-row-label">System RAM</div><div class="hw-row-value">${fmtMem(hw.ram_mb)}</div></div></div>
         <div class="hw-row"><div class="hw-row-icon"><i class="fa-solid fa-layer-group" style="color:var(--purple)"></i></div>
           <div style="width:100%"><div class="hw-row-label">GPU${gpus.length!==1?'s':''}</div>${gpuRows}</div></div>
-        <div class="hw-row"><div class="hw-row-icon" style="font-size:9px;font-weight:700">${backBadge(hw.primary_backend||'cpu')}</div>
+        <div class="hw-row"><div class="hw-row-icon">${backendProviderIcon(hw.primary_backend||'cpu')}</div>
           <div><div class="hw-row-label">Backend</div><div class="hw-row-value">${(hw.primary_backend||'cpu').toUpperCase()}</div>
           <div class="hw-row-sub">${hw.total_fp16_tflops?'~'+hw.total_fp16_tflops.toFixed(1)+' FP16 TFLOPS':'CPU only'}</div></div></div>
       </div>
