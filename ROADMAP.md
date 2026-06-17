@@ -27,11 +27,15 @@
 
 > Goal: make the cluster view feel alive like EXO — real-time GPU%, temp, wattage per node.
 
-- [ ] `/api/stats` endpoint — polls `nvidia-smi` (GPU util%, temp, power), `psutil` (CPU%, RAM used) every 2 seconds per node
-- [ ] WebSocket pushes stats updates to dashboard alongside peer updates
-- [ ] Node cards show live GPU utilization bar, temperature, and wattage
-- [ ] Inference activity indicator — node cards pulse during active generation
+- [ ] `/api/stats` endpoint — polls `nvidia-smi` (GPU util%, temp, power draw) on NVIDIA nodes, `psutil` (CPU%, RAM used) on all nodes every 2 seconds
+- [ ] Apple Silicon nodes: CPU% + RAM via `psutil` only for now (GPU temp/wattage added in v0.5 native app via `powermetrics`)
+- [ ] WebSocket pushes stats alongside peer updates — no separate polling needed
+- [ ] Node cards show live GPU utilization bar, temperature, wattage
+- [ ] Inference activity indicator — node card pulses when generation is active
 - [ ] Stats history — sparkline charts (last 60s) per node in hardware tab
+- [ ] Inference engine detection — auto-detect whether each node is running Ollama, MLX (`mlx_lm.server`), llama-server, or vLLM; show engine label in node card and hardware tab
+- [ ] MLX support note: install `mlx_lm` on Mac mini for significantly faster Apple Silicon inference — already OpenAI-compatible, zero code changes needed
+- [ ] vLLM support note: install `vllm` on Windows for higher NVIDIA throughput — already OpenAI-compatible, zero code changes needed
 
 ---
 
