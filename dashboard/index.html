@@ -942,7 +942,13 @@ async function sendMessage(){
         if(!line.startsWith('data: '))continue;
         const chunk=line.slice(6).trim();if(chunk==='[DONE]')break;
         try{
-          const delta=JSON.parse(chunk).choices?.[0]?.delta?.content||'';if(!delta)continue;
+          const parsed=JSON.parse(chunk);
+          if(parsed.error){
+            replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(parsed.detail||parsed.error)}</span>`;
+            clearInterval(tpsInterval);tpsEl.classList.add('hidden');
+            chatStreaming=false;document.getElementById('chat-send').disabled=false;return;
+          }
+          const delta=parsed.choices?.[0]?.delta?.content||'';if(!delta)continue;
           fullText+=delta;tokenCount++;
           const thinkMatch=fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
           if(thinkMatch){

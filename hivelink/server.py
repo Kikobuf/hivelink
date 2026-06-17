@@ -226,6 +226,7 @@ class ChatRequest(BaseModel):
     stream: bool = False
     temperature: float = 0.7
     max_tokens: int = 1024
+    top_p: float = 1.0
 
 
 async def _find_inference_port() -> int:
@@ -252,13 +253,17 @@ async def chat_completions(req: ChatRequest):
         "stream":      req.stream,
         "temperature": req.temperature,
         "max_tokens":  req.max_tokens,
+        "top_p":       req.top_p,
     }
     if req.stream:
         async def gen() -> AsyncGenerator[bytes, None]:
-            async with httpx.AsyncClient(timeout=120) as client:
-                async with client.stream("POST", llama_url, json=payload) as resp:
-                    async for chunk in resp.aiter_bytes():
-                        yield chunk
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    async with client.stream("POST", llama_url, json=payload) as resp:
+                        async for chunk in resp.aiter_bytes():
+                            yield chunk
+            except Exception:
+                pass
         return StreamingResponse(gen(), media_type="text/event-stream")
 
     async with httpx.AsyncClient(timeout=120) as client:
