@@ -204,6 +204,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .chat-input::placeholder{color:var(--muted)}
 .chat-send{padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0}
 .chat-send:disabled{opacity:.4;cursor:default}
+.chat-tps{font-size:11px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:5px;padding:0 4px;white-space:nowrap}
+.chat-tps-val{color:var(--green);font-weight:600;min-width:36px;display:inline-block}
+.chat-tps.hidden{visibility:hidden}
 
 /* Config panel */
 .config-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:sticky;top:76px}
@@ -905,7 +908,16 @@ async function sendMessage(){
   msgs.appendChild(replyDiv);msgs.scrollTop=msgs.scrollHeight;
 
   chatStreaming=true;document.getElementById('chat-send').disabled=true;
+  tokenCount=0;streamStart=Date.now();
+  const tpsEl=document.getElementById('chat-tps');
+  const tpsVal=document.getElementById('chat-tps-val');
+  tpsEl.classList.remove('hidden');tpsVal.textContent='…';
+  tpsInterval=setInterval(()=>{
+    const secs=(Date.now()-streamStart)/1000;
+    if(secs>0.3&&tokenCount>0) tpsVal.textContent=(tokenCount/secs).toFixed(1);
+  },300);
   let fullText='',thinkText='',responseStarted=false;
+  let tokenCount=0,streamStart=0,tpsInterval=null;
 
   // Build messages array including optional system prompt
   const systemMsg=cfg.system.trim()?[{role:'system',content:cfg.system}]:[];
@@ -931,7 +943,7 @@ async function sendMessage(){
         const chunk=line.slice(6).trim();if(chunk==='[DONE]')break;
         try{
           const delta=JSON.parse(chunk).choices?.[0]?.delta?.content||'';if(!delta)continue;
-          fullText+=delta;
+          fullText+=delta;tokenCount++;
           const thinkMatch=fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
           if(thinkMatch){
             thinkText=thinkMatch[1];
@@ -972,6 +984,13 @@ async function sendMessage(){
     saveCurrentConversation();
   }catch(e){
     replyDiv.innerHTML=`<span style="color:var(--red)">Connection error — is Ollama / llama-server running?</span>`;
+  }
+  clearInterval(tpsInterval);
+  const finalSecs=(Date.now()-streamStart)/1000;
+  if(tokenCount>0&&finalSecs>0){
+    document.getElementById('chat-tps-val').textContent=(tokenCount/finalSecs).toFixed(1);
+  } else {
+    document.getElementById('chat-tps').classList.add('hidden');
   }
   chatStreaming=false;document.getElementById('chat-send').disabled=false;
 }
