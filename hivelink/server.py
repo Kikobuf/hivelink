@@ -139,13 +139,49 @@ async def get_hardware():
     return _hardware.to_dict()
 
 
+async def _ollama_models() -> list[dict]:
+    """Fetch models actually loaded in Ollama/llama-server."""
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            # Try OpenAI-compatible /v1/models first (Ollama + llama-server both support this)
+            resp = await client.get(f"http://127.0.0.1:{LLAMA_CPP_SERVER_PORT}/v1/models")
+            if resp.status_code == 200:
+                data = resp.json()
+                return [m["id"] for m in data.get("data", [])]
+    except Exception:
+        pass
+    return []
+
+
 @app.get("/api/models")
 async def get_models():
     if not _discovery:
         raise HTTPException(503, "Discovery not running")
     peers  = _discovery.active_peers()
+
+    # Live models from Ollama / llama-server (what's actually running)
+    live_model_ids = await _ollama_models()
+
     models = []
+
+    # Add live models first — these are actually usable right now
+    for mid in live_model_ids:
+        models.append({
+            "model_id":  mid,
+            "params_b":  0,
+            "layers":    0,
+            "quant_bits": 4,
+            "size_mb":   0,
+            "can_run":   True,
+            "live":      True,   # actually loaded in inference engine
+        })
+
+    # Add cluster-feasible models from the known spec list
+    live_ids_lower = {m.lower() for m in live_model_ids}
     for model_id, (layers, params_b) in MODEL_SPECS.items():
+        # Skip if already listed as a live model
+        if any(model_id in lid for lid in live_ids_lower):
+            continue
         for bits in [4, 8]:
             check = can_run_model(peers, model_id, bits)
             if check["can_run"]:
@@ -156,8 +192,10 @@ async def get_models():
                     "quant_bits":bits,
                     "size_mb":   check["needed_mb"],
                     "can_run":   True,
+                    "live":      False,
                 })
                 break
+
     return {"models": models}
 
 
