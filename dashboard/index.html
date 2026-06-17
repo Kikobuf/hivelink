@@ -80,10 +80,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .cluster-empty{padding:48px 24px;text-align:center;color:var(--muted)}
 .node-card{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transition:border-color .2s}
 .node-card:hover{border-color:var(--border2)}
-.node-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)}
-.node-card-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
-.node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 5px}
-.node-card-backend{font-size:10px}
+.node-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:6px;min-width:0}
+.node-card-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 5px;flex-shrink:0;white-space:nowrap}
+.node-card-backend{font-size:10px;flex-shrink:0}
 .node-card-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .node-stat-row{display:flex;align-items:center;justify-content:space-between;font-size:11px}
 .node-stat-label{color:var(--muted);font-size:10px}
@@ -613,7 +613,7 @@ function siImg(slug, color, size=13){
 function osIcon(os){
   const map = {
     darwin:  siImg('apple','a8b3c4',16),
-    windows: siImg('windows','00adef',16),
+    windows: '<i class="fa-brands fa-windows" style="color:#00adef;font-size:16px"></i>',
     linux:   siImg('linux','f5a623',16),
   };
   return map[os] || '<i class="fa-solid fa-microchip"></i>';
@@ -640,7 +640,7 @@ function gpuBrandHtml(name){
 function cpuBrandHtml(name){
   if(!name) return '<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
   const n = name.toLowerCase();
-  if(n.includes('intel')||n.includes('genuineintel'))  return siImg('intel','0071c5',14);
+  if(n.includes('intel')||n.includes('genuineintel')||n.includes('intel64'))  return siImg('intel','0071c5',14);
   if(n.includes('amd')||n.includes('ryzen')||n.includes('epyc')||n.includes('threadripper')) return siImg('amd','e8534f',14);
   if(n.includes('apple')||n.includes('arm'))           return siImg('apple','a8b3c4',14);
   if(n.includes('qualcomm')||n.includes('snapdragon')) return siImg('qualcomm','3253DC',14);
@@ -651,11 +651,11 @@ function cpuBrandHtml(name){
 // Llama = Meta, Gemma = Google, others have their own slugs
 const MODEL_META={
   llama:    { bg:'#0064e0', icon: siImg('meta','ffffff',13),          label:'Meta'     },
-  qwen:     { bg:'#7B3FE4', icon: `<span style="color:#fff;font-size:10px;font-weight:700;line-height:1">阿</span>`, label:'Alibaba' },
+      qwen:     { bg:'#6950EF', icon: siImg('qwen','ffffff',13),           label:'Qwen'     },
   mistral:  { bg:'#FF7000', icon: siImg('mistralai','ffffff',13),     label:'Mistral'  },
   mixtral:  { bg:'#FF7000', icon: siImg('mistralai','ffffff',13),     label:'Mistral'  },
   deepseek: { bg:'#4D6BFE', icon: siImg('deepseek','ffffff',13),      label:'DeepSeek' },
-  gemma:    { bg:'#4285f4', icon: siImg('google','ffffff',13),        label:'Google'   },
+  gemma:    { bg:'#8E75B2', icon: siImg('googlegemini','ffffff',13),  label:'Google'   },
   phi:      { bg:'#0078d4', icon: siImg('microsoft','ffffff',13),     label:'Microsoft'},
   command:  { bg:'#D18EE2', icon: `<span style="color:#fff;font-size:9px;font-weight:700">C+</span>`, label:'Cohere' },
   default:  { bg:'#30363d', icon: '<i class="fa-solid fa-cube" style="color:#7d8590;font-size:10px"></i>', label:'' },
