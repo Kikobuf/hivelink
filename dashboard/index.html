@@ -4,236 +4,243 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>HiveLink</title>
-<!-- Simple Icons for brand logos (Apple, NVIDIA, Windows, Linux, AMD) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:        #080b0f;
-  --surface:   #0d1117;
-  --surface2:  #161b22;
-  --surface3:  #1c2330;
-  --border:    #21262d;
-  --border2:   #30363d;
-  --text:      #e6edf3;
-  --muted:     #7d8590;
-  --muted2:    #484f58;
-  --accent:    #2f81f7;
-  --accent-dim:#1f6feb22;
-  --green:     #3fb950;
-  --amber:     #d29922;
-  --red:       #f85149;
-  --purple:    #bc8cff;
-  --cuda:      #76b900;
-  --metal:     #a8b3c4;
-  --rocm:      #e8534f;
-  --cpu:       #58a6ff;
-  --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
-  --r: 6px;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b0f;--surface:#0d1117;--surface2:#161b22;--surface3:#1c2330;
+  --border:#21262d;--border2:#30363d;--text:#e6edf3;--muted:#7d8590;--muted2:#484f58;
+  --accent:#2f81f7;--accent-dim:#1f6feb22;--green:#3fb950;--amber:#d29922;
+  --red:#f85149;--purple:#bc8cff;--cuda:#76b900;--metal:#a8b3c4;--rocm:#e8534f;--cpu:#58a6ff;
+  --mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;--r:6px;
 }
-
-body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif; font-size:13px; line-height:1.5; min-height:100vh; }
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
 
 /* Header */
-.header { position:sticky; top:0; z-index:200; display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:52px; background:var(--surface); border-bottom:1px solid var(--border); }
-.logo { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:600; letter-spacing:-0.02em; user-select:none; }
-.logo-hex { width:26px; height:26px; background:var(--accent); clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); display:flex; align-items:center; justify-content:center; }
-.logo-hex svg { width:13px; height:13px; fill:#fff; }
-.header-right { display:flex; align-items:center; gap:14px; }
-.hstat { display:flex; align-items:baseline; gap:4px; }
-.hstat-val { font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
-.hstat-lbl { font-size:10px; color:var(--muted); }
-.header-stats { display:flex; gap:16px; align-items:center; }
-.conn-pill { display:flex; align-items:center; gap:6px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; font-size:11px; color:var(--muted); }
-.dot { width:6px; height:6px; border-radius:50%; background:var(--muted2); transition:background 0.3s; }
-.dot.live { background:var(--green); animation:blink 2.5s infinite; }
-.dot.error { background:var(--red); }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.header{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--surface);border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;letter-spacing:-.02em;user-select:none}
+.logo-hex{width:26px;height:26px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center}
+.logo-hex svg{width:13px;height:13px;fill:#fff}
+.header-right{display:flex;align-items:center;gap:14px}
+.hstat{display:flex;align-items:baseline;gap:4px}
+.hstat-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.hstat-lbl{font-size:10px;color:var(--muted)}
+.header-stats{display:flex;gap:16px;align-items:center}
+.conn-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);transition:background .3s}
+.dot.live{background:var(--green);animation:blink 2.5s infinite}
+.dot.error{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* Layout */
-.layout { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 52px); }
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 52px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;color:var(--muted);font-size:13px;border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--text);background:var(--accent-dim);border-left-color:var(--accent)}
+.nav-icon{width:15px;text-align:center;font-size:12px;flex-shrink:0}
+.sidebar-sep{height:1px;background:var(--border);margin:8px 16px}
+.sidebar-stats{padding:10px 16px 0}
+.sstat{padding:8px 0;border-bottom:1px solid var(--border)}
+.sstat:last-child{border-bottom:none}
+.sstat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sstat-value{font-size:18px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.sstat-sub{font-size:10px;color:var(--muted);margin-top:1px}
 
-/* Sidebar */
-.sidebar { background:var(--surface); border-right:1px solid var(--border); padding:12px 0; position:sticky; top:52px; height:calc(100vh - 52px); overflow-y:auto; }
-.nav-item { display:flex; align-items:center; gap:9px; padding:7px 16px; cursor:pointer; color:var(--muted); font-size:13px; border-left:2px solid transparent; transition:all 0.15s; }
-.nav-item:hover { color:var(--text); background:var(--surface2); }
-.nav-item.active { color:var(--text); background:var(--accent-dim); border-left-color:var(--accent); }
-.nav-icon { width:15px; text-align:center; font-size:13px; flex-shrink:0; }
-.sidebar-sep { height:1px; background:var(--border); margin:8px 16px; }
-.sidebar-stats { padding:10px 16px 0; }
-.sstat { padding:8px 0; border-bottom:1px solid var(--border); }
-.sstat:last-child { border-bottom:none; }
-.sstat-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
-.sstat-value { font-size:18px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
-.sstat-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+/* Conversation history in sidebar */
+.conv-section{flex:1;overflow-y:auto;padding:0 0 8px}
+.conv-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.conv-clear-all{font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;padding:2px 4px;border-radius:3px}
+.conv-clear-all:hover{color:var(--red)}
+.conv-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;border-radius:0}
+.conv-item:hover{background:var(--surface2);border-left-color:var(--border2)}
+.conv-item.active-conv{background:var(--accent-dim);border-left-color:var(--accent)}
+.conv-item-text{flex:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-item-time{font-size:10px;color:var(--muted2);flex-shrink:0}
+.conv-del{font-size:10px;color:var(--muted2);cursor:pointer;padding:2px 4px;opacity:0;transition:opacity .15s}
+.conv-item:hover .conv-del{opacity:1}
+.conv-del:hover{color:var(--red)}
+.conv-new-btn{display:flex;align-items:center;gap:7px;margin:8px 12px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s}
+.conv-new-btn:hover{color:var(--text);border-color:var(--accent)}
 
 /* Main */
-.main { overflow:auto; }
-.page { display:none; padding:24px; }
-.page.active { display:block; }
-.page-header { margin-bottom:20px; }
-.page-title { font-size:16px; font-weight:600; letter-spacing:-0.01em; }
-.page-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.main{overflow:auto}
+.page{display:none;padding:24px}
+.page.active{display:block}
+.page-header{margin-bottom:20px}
+.page-title{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
 
 /* Cards */
-.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; }
-.card-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* EXO-style node cards */
+.cluster-nodes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;padding:20px}
+.cluster-empty{padding:48px 24px;text-align:center;color:var(--muted)}
+.node-card{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transition:border-color .2s}
+.node-card:hover{border-color:var(--border2)}
+.node-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)}
+.node-card-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+.node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 5px}
+.node-card-backend{font-size:10px}
+.node-card-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.node-stat-row{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.node-stat-label{color:var(--muted);font-size:10px}
+.node-stat-val{font-family:var(--mono);font-size:11px;font-weight:600}
+.node-mem-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:3px}
+.node-mem-fill{height:100%;border-radius:3px;transition:width .6s}
+.node-card-footer{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;gap:10px;justify-content:space-between}
+.node-gpu-name{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+
+/* Connection arrows between nodes */
+.cluster-viz-wrap{position:relative}
+.cluster-arrows{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
 
 /* Node table */
-.node-table { width:100%; border-collapse:collapse; }
-.node-table th { text-align:left; padding:8px 16px; font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border); background:var(--surface2); }
-.node-table td { padding:11px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
-.node-table tr:last-child td { border-bottom:none; }
-.node-table tr:hover td { background:var(--surface2); }
-.node-name-cell { display:flex; align-items:center; gap:10px; }
-
-/* OS/GPU icons using Font Awesome */
-.node-avatar {
-  width:34px; height:34px; border-radius:7px;
-  background:var(--surface2); border:1px solid var(--border2);
-  display:flex; align-items:center; justify-content:center;
-  font-size:16px; flex-shrink:0;
-}
-.node-avatar .fa-apple        { color:#a8b3c4; }
-.node-avatar .fa-windows      { color:#00adef; }
-.node-avatar .fa-linux        { color:#f5a623; }
-.node-avatar .fa-microchip    { color:#58a6ff; }  /* CPU fallback */
-
-.node-id-text { font-family:var(--mono); font-size:11px; color:var(--text); }
-.node-hostname { font-size:10px; color:var(--muted); margin-top:1px; }
-
-/* GPU brand icon in GPU column */
-.gpu-cell { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
-.gpu-brand-icon { font-size:13px; flex-shrink:0; }
-.gpu-brand-icon.nvidia { color:var(--cuda); }
-.gpu-brand-icon.amd    { color:var(--rocm); }
-.gpu-brand-icon.apple  { color:var(--metal); }
+.node-table{width:100%;border-collapse:collapse}
+.node-table th{text-align:left;padding:8px 16px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:var(--surface2)}
+.node-table td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.node-table tr:last-child td{border-bottom:none}
+.node-table tr:hover td{background:var(--surface2)}
+.node-name-cell{display:flex;align-items:center;gap:10px}
+.node-avatar{width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.node-id-text{font-family:var(--mono);font-size:11px;color:var(--text)}
+.node-hostname{font-size:10px;color:var(--muted);margin-top:1px}
+.gpu-cell{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
 
 /* Badges */
-.badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.04em; font-family:var(--mono); }
-.badge-cuda   { background:#76b90018; color:var(--cuda);  border:1px solid #76b90044; }
-.badge-metal  { background:#a8b3c418; color:var(--metal); border:1px solid #a8b3c444; }
-.badge-rocm   { background:#e8534f18; color:var(--rocm);  border:1px solid #e8534f44; }
-.badge-cpu    { background:#58a6ff18; color:var(--cpu);   border:1px solid #58a6ff44; }
-.badge-vulkan { background:#bc8cff18; color:var(--purple);border:1px solid #bc8cff44; }
-.badge-self   { background:var(--accent-dim); color:var(--accent); border:1px solid #2f81f744; font-family:inherit; font-size:9px; letter-spacing:0.06em; }
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.04em;font-family:var(--mono)}
+.badge-cuda{background:#76b90018;color:var(--cuda);border:1px solid #76b90044}
+.badge-metal{background:#a8b3c418;color:var(--metal);border:1px solid #a8b3c444}
+.badge-rocm{background:#e8534f18;color:var(--rocm);border:1px solid #e8534f44}
+.badge-cpu{background:#58a6ff18;color:var(--cpu);border:1px solid #58a6ff44}
+.badge-vulkan{background:#bc8cff18;color:var(--purple);border:1px solid #bc8cff44}
+.badge-self{background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;font-family:inherit;font-size:9px}
 
 /* Memory bar */
-.mem-bar { display:flex; align-items:center; gap:8px; }
-.mem-track { flex:1; height:4px; background:var(--surface3); border-radius:2px; overflow:hidden; }
-.mem-fill { height:100%; background:var(--accent); border-radius:2px; transition:width 0.5s; }
-.mem-text { font-family:var(--mono); font-size:11px; color:var(--text); min-width:50px; }
-.tflops-text { font-family:var(--mono); font-size:12px; color:var(--text); }
+.mem-bar{display:flex;align-items:center;gap:8px}
+.mem-track{flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.mem-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s}
+.mem-text{font-family:var(--mono);font-size:11px;color:var(--text);min-width:50px}
 
 /* Empty */
-.empty { display:flex; flex-direction:column; align-items:center; padding:48px 24px; gap:8px; color:var(--muted); }
-.empty-icon { font-size:28px; margin-bottom:4px; }
-.empty-title { font-size:14px; font-weight:500; color:var(--text); }
-.empty-sub { font-size:12px; text-align:center; line-height:1.6; }
-.empty code { background:var(--surface2); padding:1px 5px; border-radius:3px; font-family:var(--mono); font-size:11px; color:var(--accent); }
+.empty{display:flex;flex-direction:column;align-items:center;padding:48px 24px;gap:8px;color:var(--muted)}
+.empty-icon{font-size:28px;margin-bottom:4px}
+.empty-title{font-size:14px;font-weight:500;color:var(--text)}
+.empty-sub{font-size:12px;text-align:center;line-height:1.6}
+.empty code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--accent)}
 
-/* Models grid */
-.models-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
-.model-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; cursor:pointer; transition:border-color 0.15s,background 0.15s; }
-.model-card:hover { border-color:var(--border2); background:var(--surface2); }
-.model-card.selected { border-color:var(--accent); }
-.model-name { font-size:13px; font-weight:600; color:var(--text); }
-.model-params { font-size:11px; color:var(--muted); margin-top:2px; }
-.model-bar { height:3px; background:var(--surface3); border-radius:2px; overflow:hidden; margin:10px 0 8px; }
-.model-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--purple)); border-radius:2px; }
-.model-footer { display:flex; align-items:center; justify-content:space-between; }
-.model-size { font-size:10px; color:var(--muted); font-family:var(--mono); }
-.quant-pill { display:inline-block; padding:1px 6px; background:var(--surface3); border:1px solid var(--border2); border-radius:3px; font-size:10px; font-family:var(--mono); color:var(--muted); }
-.live-pill { display:inline-block; padding:1px 6px; background:#3fb95018; border:1px solid #3fb95044; border-radius:3px; font-size:10px; color:var(--green); }
+/* Models */
+.models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.model-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
+.model-card:hover{border-color:var(--border2);background:var(--surface2)}
+.model-card.selected{border-color:var(--accent)}
+.model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+.model-name{font-size:13px;font-weight:600;color:var(--text)}
+.model-params{font-size:11px;color:var(--muted);margin-top:1px}
+.model-bar{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin:8px 0}
+.model-bar-fill{height:100%;border-radius:2px}
+.model-footer{display:flex;align-items:center;justify-content:space-between}
+.model-size{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.quant-pill{display:inline-block;padding:1px 6px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;font-size:10px;font-family:var(--mono);color:var(--muted)}
+.live-pill{display:inline-block;padding:1px 6px;background:#3fb95018;border:1px solid #3fb95044;border-radius:3px;font-size:10px;color:var(--green)}
 
 /* Layer plan */
-.layer-assignment { margin-bottom:12px; }
-.layer-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-.layer-node-id { font-family:var(--mono); font-size:11px; color:var(--text); display:flex; align-items:center; gap:6px; }
-.layer-range { font-family:var(--mono); font-size:10px; color:var(--muted); }
-.layer-track { height:28px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; overflow:hidden; position:relative; }
-.layer-fill { height:100%; position:absolute; top:0; display:flex; align-items:center; padding:0 8px; font-size:10px; font-family:var(--mono); font-weight:600; white-space:nowrap; transition:width 0.6s cubic-bezier(.34,1.2,.64,1); }
-.layer-stats { display:flex; gap:12px; margin-top:5px; font-size:10px; color:var(--muted); align-items:center; }
+.layer-assignment{margin-bottom:12px}
+.layer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.layer-node-id{font-family:var(--mono);font-size:11px;color:var(--text);display:flex;align-items:center;gap:6px}
+.layer-range{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.layer-track{height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;overflow:hidden;position:relative}
+.layer-fill{height:100%;position:absolute;top:0;display:flex;align-items:center;padding:0 8px;font-size:10px;font-family:var(--mono);font-weight:600;white-space:nowrap;transition:width .6s cubic-bezier(.34,1.2,.64,1)}
+.layer-stats{display:flex;gap:12px;margin-top:5px;font-size:10px;color:var(--muted);align-items:center}
 
-/* ── Chat ─────────────────────────────────────────────────────────────────── */
-.chat-wrap { display:flex; flex-direction:column; min-height:500px; }
-.chat-toolbar { display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid var(--border); background:var(--surface2); }
-.chat-toolbar-label { font-size:11px; color:var(--muted); }
-.chat-model-select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); color:var(--text); font-size:12px; padding:4px 8px; cursor:pointer; }
-.chat-clear { padding:3px 10px; background:transparent; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; }
-.chat-clear:hover { color:var(--text); }
-.no-model-warn { background:#d2992218; border:1px solid #d2992244; border-radius:var(--r); padding:10px 14px; font-size:12px; color:var(--amber); margin:12px 16px 0; }
-.chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; min-height:360px; max-height:calc(100vh - 300px); }
-.chat-bubble { max-width:80%; padding:10px 14px; border-radius:10px; font-size:13px; line-height:1.6; }
-.chat-bubble.user { align-self:flex-end; background:var(--accent); color:#fff; border-radius:10px 10px 2px 10px; }
-.chat-bubble.assistant { align-self:flex-start; background:var(--surface2); border:1px solid var(--border); border-radius:10px 10px 10px 2px; }
-.chat-bubble pre { background:var(--surface3); border-radius:4px; padding:8px 10px; overflow-x:auto; margin-top:6px; font-size:11px; font-family:var(--mono); }
-.chat-bubble code { font-family:var(--mono); font-size:11px; background:var(--surface3); padding:1px 4px; border-radius:3px; }
-.chat-bubble pre code { background:none; padding:0; }
+/* Hardware tab */
+.hw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.hw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.hw-card-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.hw-card-os-icon{width:32px;height:32px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.hw-card-title{font-size:13px;font-weight:600}
+.hw-card-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.hw-self-badge{margin-left:auto}
+.hw-rows{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.hw-row{display:flex;align-items:flex-start;gap:10px}
+.hw-row-icon{width:28px;height:28px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+.hw-row-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.hw-row-value{font-size:12px;color:var(--text);margin-top:2px;font-weight:500}
+.hw-row-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.hw-gpu-row{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;margin-top:4px}
+.hw-gpu-name{font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px}
+.hw-gpu-specs{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:12px}
 
-/* Thinking animation — Grok-style dots */
-.thinking-wrap { display:flex; flex-direction:column; gap:8px; }
-.thinking-dots { display:flex; align-items:center; gap:5px; padding:4px 0; }
-.thinking-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); animation:tdot 1.4s infinite ease-in-out; }
-.thinking-dot:nth-child(1) { animation-delay:0s; }
-.thinking-dot:nth-child(2) { animation-delay:0.2s; }
-.thinking-dot:nth-child(3) { animation-delay:0.4s; }
-@keyframes tdot {
-  0%,80%,100% { transform:scale(0.7); opacity:0.4; }
-  40%          { transform:scale(1.15); opacity:1; }
-}
+/* Chat */
+.chat-layout{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start}
+.chat-wrap{display:flex;flex-direction:column;min-height:520px}
+.chat-toolbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
+.chat-toolbar-label{font-size:11px;color:var(--muted)}
+.chat-model-select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:12px;padding:4px 8px;cursor:pointer;max-width:200px}
+.chat-clear{padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-size:11px;cursor:pointer}
+.chat-clear:hover{color:var(--text)}
+.no-model-warn{background:#d2992218;border:1px solid #d2992244;border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--amber);margin:12px 16px 0}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;min-height:360px;max-height:calc(100vh - 340px)}
+.chat-bubble{max-width:82%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6}
+.chat-bubble.user{align-self:flex-end;background:var(--accent);color:#fff;border-radius:10px 10px 2px 10px}
+.chat-bubble.assistant{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:10px 10px 10px 2px}
+.chat-bubble pre{background:var(--surface3);border-radius:4px;padding:8px 10px;overflow-x:auto;margin-top:6px;font-size:11px;font-family:var(--mono)}
+.chat-bubble code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
+.chat-bubble pre code{background:none;padding:0}
+.thinking-wrap{display:flex;flex-direction:column;gap:8px}
+.thinking-dots{display:flex;align-items:center;gap:5px;padding:4px 0}
+.thinking-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tdot 1.4s infinite ease-in-out}
+.thinking-dot:nth-child(1){animation-delay:0s}.thinking-dot:nth-child(2){animation-delay:.2s}.thinking-dot:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.15);opacity:1}}
+.thinking-text{font-size:11px;color:var(--muted);font-family:var(--mono);background:var(--surface3);border:1px solid var(--border);border-radius:5px;padding:8px 10px;max-height:100px;overflow-y:auto;line-height:1.6;white-space:pre-wrap;border-left:2px solid var(--purple);display:none}
+.thinking-text.has-content{display:block}
+.thinking-label{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--purple);margin-bottom:4px}
+.chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.chat-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;resize:none;min-height:40px;max-height:120px;outline:none;transition:border-color .15s}
+.chat-input:focus{border-color:var(--accent)}
+.chat-input::placeholder{color:var(--muted)}
+.chat-send{padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0}
+.chat-send:disabled{opacity:.4;cursor:default}
 
-/* Thinking text box — shows model's chain of thought */
-.thinking-text {
-  font-size:11px; color:var(--muted); font-family:var(--mono);
-  background:var(--surface3); border:1px solid var(--border);
-  border-radius:5px; padding:8px 10px;
-  max-height:120px; overflow-y:auto;
-  line-height:1.6; white-space:pre-wrap;
-  border-left:2px solid var(--purple);
-  display:none;
-}
-.thinking-text.has-content { display:block; }
-.thinking-label { font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--purple); margin-bottom:4px; }
-
-.chat-input-row { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface); }
-.chat-input { flex:1; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); padding:9px 12px; color:var(--text); font-size:13px; font-family:inherit; resize:none; min-height:40px; max-height:120px; outline:none; transition:border-color 0.15s; }
-.chat-input:focus { border-color:var(--accent); }
-.chat-input::placeholder { color:var(--muted); }
-.chat-send { padding:9px 16px; background:var(--accent); color:#fff; border:none; border-radius:var(--r); font-size:13px; font-weight:500; cursor:pointer; transition:opacity 0.15s; flex-shrink:0; }
-.chat-send:hover { opacity:0.85; }
-.chat-send:disabled { opacity:0.4; cursor:default; }
+/* Config panel */
+.config-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:sticky;top:76px}
+.config-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between}
+.config-body{padding:14px}
+.config-row{margin-bottom:14px}
+.config-row:last-child{margin-bottom:0}
+.config-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.config-val{font-family:var(--mono);font-size:11px;color:var(--accent)}
+.config-slider{width:100%;accent-color:var(--accent);cursor:pointer}
+.config-textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:7px 9px;color:var(--text);font-size:11px;font-family:inherit;resize:vertical;min-height:70px;outline:none;transition:border-color .15s;line-height:1.5}
+.config-textarea:focus{border-color:var(--accent)}
+.config-reset{font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;padding:0}
+.config-reset:hover{color:var(--text)}
 
 /* API & Install */
-.code-block { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; font-family:var(--mono); font-size:11px; color:var(--text); overflow-x:auto; white-space:pre; }
-.code-block .comment { color:var(--muted); }
-.code-block .cmd { color:var(--green); }
-.code-block .flag { color:var(--amber); }
-.api-box { font-family:var(--mono); font-size:12px; }
-.api-row { display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid var(--border); }
-.api-row:last-child { border-bottom:none; }
-.api-method { color:var(--green); font-size:10px; font-weight:700; width:34px; flex-shrink:0; }
-.api-path { color:var(--accent); flex:1; }
-.api-desc { color:var(--muted); font-size:10px; }
-.copy-btn { padding:3px 10px; background:var(--surface3); border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; transition:all 0.15s; }
-.copy-btn:hover { color:var(--text); }
-.copy-btn.copied { color:var(--green); border-color:#3fb95044; }
-.install-step { border-left:2px solid var(--border2); padding:0 0 22px 20px; position:relative; margin-left:16px; }
-.install-step:last-child { padding-bottom:0; border-left-color:transparent; }
-.step-num { position:absolute; left:-12px; top:0; width:22px; height:22px; border-radius:50%; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--muted); }
-.step-title { font-size:13px; font-weight:600; margin-bottom:6px; padding-top:1px; }
-.step-desc { font-size:12px; color:var(--muted); margin-bottom:10px; line-height:1.6; }
+.code-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--text);overflow-x:auto;white-space:pre}
+.code-block .comment{color:var(--muted)}.code-block .cmd{color:var(--green)}.code-block .flag{color:var(--amber)}
+.api-box{font-family:var(--mono);font-size:12px}
+.api-row{display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)}
+.api-row:last-child{border-bottom:none}
+.api-method{color:var(--green);font-size:10px;font-weight:700;width:34px;flex-shrink:0}
+.api-path{color:var(--accent);flex:1}
+.api-desc{color:var(--muted);font-size:10px}
+.copy-btn{padding:3px 10px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-size:11px;cursor:pointer}
+.copy-btn.copied{color:var(--green);border-color:#3fb95044}
+.install-step{border-left:2px solid var(--border2);padding:0 0 22px 20px;position:relative;margin-left:16px}
+.install-step:last-child{padding-bottom:0;border-left-color:transparent}
+.step-num{position:absolute;left:-12px;top:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--muted)}
+.step-title{font-size:13px;font-weight:600;margin-bottom:6px;padding-top:1px}
+.step-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
 
-@media(max-width:768px) {
-  .layout { grid-template-columns:1fr; }
-  .sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); }
-  .header-stats { display:none; }
-}
+@media(max-width:900px){.chat-layout{grid-template-columns:1fr}.config-panel{position:static}}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}.header-stats{display:none}}
 </style>
 </head>
 <body>
-
 <header class="header">
   <div class="logo">
     <div class="logo-hex"><svg viewBox="0 0 14 14"><path d="M7 1L13 4.5v5L7 13 1 9.5v-5z"/></svg></div>
@@ -250,146 +257,185 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 </header>
 
 <div class="layout">
-  <nav class="sidebar">
-    <div class="nav-item active" data-page="cluster"><span class="nav-icon">⬡</span> Cluster</div>
-    <div class="nav-item" data-page="models"><span class="nav-icon">◈</span> Models</div>
-    <div class="nav-item" data-page="chat"><span class="nav-icon">◻</span> Chat</div>
-    <div class="nav-item" data-page="api"><span class="nav-icon">⇌</span> API</div>
-    <div class="nav-item" data-page="install"><span class="nav-icon">↓</span> Setup</div>
-    <div class="sidebar-sep"></div>
-    <div class="sidebar-stats">
-      <div class="sstat"><div class="sstat-label">Nodes online</div><div class="sstat-value" id="ss-nodes">—</div></div>
-      <div class="sstat"><div class="sstat-label">Total memory</div><div class="sstat-value" id="ss-mem">—</div><div class="sstat-sub" id="ss-mem-sub"></div></div>
-      <div class="sstat"><div class="sstat-label">TFLOPS</div><div class="sstat-value" id="ss-tflops">—</div></div>
-      <div class="sstat"><div class="sstat-label">Largest model (Q4)</div><div class="sstat-value" id="ss-maxmodel">—</div></div>
+<nav class="sidebar">
+  <div class="nav-item active" data-page="cluster"><span class="nav-icon"><i class="fa-solid fa-circle-nodes"></i></span> Cluster</div>
+  <div class="nav-item" data-page="hardware"><span class="nav-icon"><i class="fa-solid fa-microchip"></i></span> Hardware</div>
+  <div class="nav-item" data-page="models"><span class="nav-icon"><i class="fa-solid fa-cube"></i></span> Models</div>
+  <div class="nav-item" data-page="chat"><span class="nav-icon"><i class="fa-regular fa-comment"></i></span> Chat</div>
+  <div class="nav-item" data-page="api"><span class="nav-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></span> API</div>
+  <div class="nav-item" data-page="install"><span class="nav-icon"><i class="fa-solid fa-download"></i></span> Setup</div>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-stats">
+    <div class="sstat"><div class="sstat-label">Nodes online</div><div class="sstat-value" id="ss-nodes">—</div></div>
+    <div class="sstat"><div class="sstat-label">Total memory</div><div class="sstat-value" id="ss-mem">—</div><div class="sstat-sub" id="ss-mem-sub"></div></div>
+    <div class="sstat"><div class="sstat-label">TFLOPS</div><div class="sstat-value" id="ss-tflops">—</div></div>
+    <div class="sstat"><div class="sstat-label">Largest model (Q4)</div><div class="sstat-value" id="ss-maxmodel">—</div></div>
+  </div>
+  <div class="sidebar-sep" style="margin-top:10px"></div>
+  <!-- Conversation history -->
+  <div class="conv-section" id="conv-section">
+    <div class="conv-header">
+      <span>Conversations</span>
+      <button class="conv-clear-all" onclick="clearAllConversations()" title="Clear all">Clear all</button>
     </div>
-  </nav>
-
-  <div class="main">
-
-    <!-- Cluster -->
-    <div class="page active" id="page-cluster">
-      <div class="page-header"><div class="page-title">Cluster nodes</div><div class="page-sub">Devices discovered automatically via UDP broadcast on your LAN</div></div>
-      <div class="card">
-        <table class="node-table">
-          <thead><tr><th>Node</th><th>Backend</th><th style="width:200px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
-          <tbody id="node-tbody">
-            <tr><td colspan="5"><div class="empty"><div class="empty-icon"><i class="fa-solid fa-circle-nodes"></i></div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div></div></td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="conv-new-btn" onclick="newConversation()">
+      <i class="fa-solid fa-plus" style="font-size:10px"></i> New chat
     </div>
+    <div id="conv-list"></div>
+  </div>
+</nav>
 
-    <!-- Models -->
-    <div class="page" id="page-models">
-      <div class="page-header"><div class="page-title">Available models</div><div class="page-sub">Models your cluster can run — click one to see the layer distribution plan</div></div>
-      <div class="models-grid" id="models-grid">
-        <div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models yet</div><div class="empty-sub">Connect nodes with enough combined memory</div></div>
-      </div>
-      <div id="plan-container" style="display:none;margin-top:20px">
-        <div class="card">
-          <div class="card-header"><span id="plan-title">Layer distribution</span></div>
-          <div style="padding:16px"><div class="plan-meta" id="plan-meta" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div><div id="plan-assignments"></div></div>
-        </div>
-      </div>
-    </div>
+<div class="main">
 
-    <!-- Chat -->
-    <div class="page" id="page-chat">
-      <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Talk to your cluster — responses stream directly from your local models</div></div>
-      <div class="card chat-wrap">
-        <div class="chat-toolbar">
-          <span class="chat-toolbar-label">Model</span>
-          <select class="chat-model-select" id="chat-model-select"><option value="">— select model —</option></select>
-          <button class="chat-clear" onclick="clearChat()">Clear</button>
-        </div>
-        <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above.</div>
-        <div class="chat-messages" id="chat-messages">
-          <div style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>
-        </div>
-        <div class="chat-input-row">
-          <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
-          <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
+<!-- Cluster -->
+<div class="page active" id="page-cluster">
+  <div class="page-header"><div class="page-title">Cluster</div><div class="page-sub">Devices on your LAN — discovered automatically via UDP broadcast</div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">Live nodes</div>
+    <div id="node-cards-wrap">
+      <div class="cluster-empty">
+        <div class="empty">
+          <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
+          <div class="empty-title">No nodes yet</div>
+          <div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div>
         </div>
       </div>
     </div>
-
-    <!-- API -->
-    <div class="page" id="page-api">
-      <div class="page-header"><div class="page-title">OpenAI-compatible API</div><div class="page-sub">Drop-in replacement — works with any client that supports the OpenAI API</div></div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">Base URL</div>
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
-          <code style="font-family:var(--mono);font-size:13px;color:var(--accent)" id="api-base-url"></code>
-          <button class="copy-btn" id="copy-url-btn" onclick="copyUrl()">Copy</button>
-        </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">Endpoints</div>
-        <div style="padding:14px 16px">
-          <div class="api-box">
-            <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Chat inference — streams SSE</span></div>
-            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/v1/models</span><span class="api-desc">List available models</span></div>
-            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/cluster</span><span class="api-desc">Cluster status + all peer info</span></div>
-            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer distribution plan</span></div>
-            <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live cluster updates</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">Example — Python</div>
-        <div style="padding:14px 16px"><div class="code-block" id="api-code-example"></div></div>
-      </div>
-    </div>
-
-    <!-- Install -->
-    <div class="page" id="page-install">
-      <div class="page-header"><div class="page-title">Setup guide</div><div class="page-sub">Install HiveLink on every machine you want in the cluster</div></div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">Installation</div>
-        <div style="padding:20px 24px">
-          <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
-          <div class="install-step"><div class="step-num">2</div><div class="step-title">Install HiveLink</div><div class="step-desc">Same command on all platforms.</div>
-<div class="code-block"><span class="cmd">pip install hivelink</span>
-<span class="comment"># NVIDIA GPU</span>  <span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
-<span class="comment"># AMD GPU</span>    <span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
-          <div class="install-step"><div class="step-num">3</div><div class="step-title">Start on every machine</div><div class="step-desc">Nodes discover each other automatically via UDP broadcast. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
-          <div class="install-step"><div class="step-num">4</div><div class="step-title">Start Ollama or llama-server with a model</div><div class="step-desc">HiveLink routes chat requests to your local inference engine.</div>
-<div class="code-block"><span class="comment"># Option A — Ollama (easiest)</span>
-<span class="cmd">ollama run llama3.2</span>
-
-<span class="comment"># Option B — llama-server directly</span>
-<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080
-
-<span class="comment"># Tell HiveLink which port your inference engine is on</span>
-<span class="comment"># Ollama: port 11434 | llama-server default: port 8080</span>
-<span class="cmd">set LLAMA_CPP_PORT=11434</span>  <span class="comment"># Windows</span>
-<span class="cmd">export LLAMA_CPP_PORT=11434</span>  <span class="comment"># Mac/Linux</span></div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">Compatible hardware</div>
-        <div style="padding:14px 16px">
-          <table class="node-table">
-            <thead><tr><th>Platform</th><th>OS</th><th>Backend</th></tr></thead>
-            <tbody>
-              <tr><td><i class="fa-brands fa-apple" style="color:var(--metal);margin-right:6px"></i>Apple Silicon Mac</td><td>macOS 12+</td><td><span class="badge badge-metal">METAL</span></td></tr>
-              <tr><td><i class="fa-brands fa-windows" style="color:#00adef;margin-right:6px"></i>Windows PC (NVIDIA)</td><td>Windows 10/11</td><td><span class="badge badge-cuda">CUDA</span></td></tr>
-              <tr><td><i class="fa-brands fa-linux" style="color:#f5a623;margin-right:6px"></i>Linux (NVIDIA / AMD)</td><td>Ubuntu 22+</td><td><span class="badge badge-cuda">CUDA</span> <span class="badge badge-rocm">ROCM</span></td></tr>
-              <tr><td><i class="fa-solid fa-microchip" style="color:var(--cpu);margin-right:6px"></i>CPU-only node</td><td>Any</td><td><span class="badge badge-cpu">CPU</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
+  </div>
+  <div class="card">
+    <table class="node-table">
+      <thead><tr><th>Node</th><th>Backend</th><th style="width:190px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
+      <tbody id="node-tbody"></tbody>
+    </table>
   </div>
 </div>
+
+<!-- Hardware -->
+<div class="page" id="page-hardware">
+  <div class="page-header"><div class="page-title">Hardware</div><div class="page-sub">Full specs for every connected node</div></div>
+  <div class="hw-grid" id="hw-grid">
+    <div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon"><i class="fa-solid fa-microchip" style="color:var(--muted2)"></i></div>
+      <div class="empty-title">No nodes connected</div>
+    </div>
+  </div>
+</div>
+
+<!-- Models -->
+<div class="page" id="page-models">
+  <div class="page-header"><div class="page-title">Models</div><div class="page-sub">Click a model to see the layer distribution plan</div></div>
+  <div class="models-grid" id="models-grid">
+    <div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-cube" style="color:var(--muted2)"></i></div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>
+  </div>
+  <div id="plan-container" style="display:none;margin-top:20px">
+    <div class="card"><div class="card-header"><span id="plan-title">Layer distribution</span></div>
+    <div style="padding:16px"><div id="plan-meta" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div><div id="plan-assignments"></div></div></div>
+  </div>
+</div>
+
+<!-- Chat -->
+<div class="page" id="page-chat">
+  <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Responses stream directly from your local models</div></div>
+  <div class="chat-layout">
+    <div class="card chat-wrap">
+      <div class="chat-toolbar">
+        <span class="chat-toolbar-label">Model</span>
+        <select class="chat-model-select" id="chat-model-select"><option value="">— select model —</option></select>
+        <button class="chat-clear" onclick="clearChat()">Clear</button>
+      </div>
+      <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above.</div>
+      <div class="chat-messages" id="chat-messages">
+        <div data-placeholder style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
+        <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+    <!-- Config panel -->
+    <div class="config-panel">
+      <div class="config-header">
+        <span><i class="fa-solid fa-sliders" style="margin-right:6px"></i>Settings</span>
+        <button class="config-reset" onclick="resetConfig()">Reset</button>
+      </div>
+      <div class="config-body">
+        <div class="config-row">
+          <div class="config-label">Temperature <span class="config-val" id="cfg-temp-val">0.7</span></div>
+          <input type="range" class="config-slider" id="cfg-temp" min="0" max="2" step="0.05" value="0.7" oninput="updateConfig()">
+        </div>
+        <div class="config-row">
+          <div class="config-label">Max tokens <span class="config-val" id="cfg-tokens-val">2048</span></div>
+          <input type="range" class="config-slider" id="cfg-tokens" min="128" max="8192" step="128" value="2048" oninput="updateConfig()">
+        </div>
+        <div class="config-row">
+          <div class="config-label">Top P <span class="config-val" id="cfg-topp-val">1.0</span></div>
+          <input type="range" class="config-slider" id="cfg-topp" min="0" max="1" step="0.05" value="1.0" oninput="updateConfig()">
+        </div>
+        <div class="config-row">
+          <div class="config-label" style="margin-bottom:6px">System prompt</div>
+          <textarea class="config-textarea" id="cfg-system" placeholder="You are a helpful assistant…"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API -->
+<div class="page" id="page-api">
+  <div class="page-header"><div class="page-title">API</div><div class="page-sub">OpenAI-compatible — works with any client that supports it</div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">Base URL</div>
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+      <code style="font-family:var(--mono);font-size:13px;color:var(--accent)" id="api-base-url"></code>
+      <button class="copy-btn" id="copy-url-btn" onclick="copyUrl()">Copy</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">Endpoints</div>
+    <div style="padding:14px 16px"><div class="api-box">
+      <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Chat — streams SSE</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/v1/models</span><span class="api-desc">List models</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/cluster</span><span class="api-desc">Cluster status</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/hardware</span><span class="api-desc">Node hardware</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer plan</span></div>
+      <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live updates</span></div>
+    </div></div>
+  </div>
+  <div class="card"><div class="card-header">Example — Python</div><div style="padding:14px 16px"><div class="code-block" id="api-code-example"></div></div></div>
+</div>
+
+<!-- Setup -->
+<div class="page" id="page-install">
+  <div class="page-header"><div class="page-title">Setup</div><div class="page-sub">Install HiveLink on every machine you want in the cluster</div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">Installation</div>
+    <div style="padding:20px 24px">
+      <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
+      <div class="install-step"><div class="step-num">2</div><div class="step-title">Install HiveLink</div><div class="step-desc">Same command on all platforms.</div>
+<div class="code-block"><span class="cmd">pip install hivelink</span>
+<span class="comment"># NVIDIA GPU:</span>  <span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
+<span class="comment"># AMD GPU:</span>    <span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
+      <div class="install-step"><div class="step-num">3</div><div class="step-title">Start on every machine</div><div class="step-desc">Nodes discover each other automatically. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
+      <div class="install-step"><div class="step-num">4</div><div class="step-title">Start Ollama or llama-server</div><div class="step-desc">HiveLink routes chat requests to your local inference engine.</div>
+<div class="code-block"><span class="comment"># Ollama (easiest)</span>
+<span class="cmd">ollama run llama3.2</span>
+
+<span class="comment"># llama-server direct</span>
+<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080
+
+<span class="comment"># Set backend port (Ollama=11434, llama-server=8080)</span>
+<span class="cmd">set LLAMA_CPP_PORT=11434</span>   <span class="comment"># Windows</span>
+<span class="cmd">export LLAMA_CPP_PORT=11434</span> <span class="comment"># Mac/Linux</span></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
 
 <script>
 const API_BASE = `${location.protocol}//${location.hostname}:47730`;
 const WS_BASE  = `ws://${location.hostname}:47730`;
-
 document.getElementById('api-base-url').textContent = API_BASE;
 document.getElementById('api-code-example').innerHTML =
 `<span class="comment"># pip install openai</span>
@@ -397,443 +443,547 @@ document.getElementById('api-code-example').innerHTML =
 client = OpenAI(base_url=<span class="flag">"${API_BASE}/v1"</span>, api_key=<span class="flag">"hivelink"</span>)
 response = client.chat.completions.create(
     model=<span class="flag">"llama3.2:latest"</span>,
-    messages=[{<span class="flag">"role"</span>: <span class="flag">"user"</span>, <span class="flag">"content"</span>: <span class="flag">"Hello!"</span>}],
-    stream=<span class="cmd">True</span>,
-)
+    messages=[{<span class="flag">"role"</span>:<span class="flag">"user"</span>,<span class="flag">"content"</span>:<span class="flag">"Hello!"</span>}], stream=<span class="cmd">True</span>)
 <span class="cmd">for</span> chunk <span class="cmd">in</span> response:
     <span class="cmd">print</span>(chunk.choices[0].delta.content or <span class="flag">""</span>, end=<span class="flag">""</span>)`;
 
-// ── State ────────────────────────────────────────────────────────────────────
-let peers = [], models = [], ws = null, selectedModel = null;
-let chatHistory = [], chatStreaming = false;
+// ── State ─────────────────────────────────────────────────────────────────────
+let peers=[], models=[], ws=null, selectedModel=null;
+let chatHistory=[], chatStreaming=false;
+let activeConvId=null;
+const COLORS=['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
 
-// ── Navigation ───────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('page-' + item.dataset.page).classList.add('active');
-  });
-});
-
-// ── WebSocket ────────────────────────────────────────────────────────────────
-function connect() {
-  ws = new WebSocket(`${WS_BASE}/ws/cluster`);
-  ws.onopen  = () => setConn('live', 'live');
-  ws.onclose = () => { setConn('error', 'offline'); setTimeout(connect, 3000); };
-  ws.onerror = () => setConn('error', 'error');
-  ws.onmessage = e => {
-    try {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'cluster_update') {
-        peers = msg.peers || [];
-        renderCluster(); updateSidebar(); updateHeaderStats(); fetchModels();
-      }
-    } catch(_) {}
-  };
+// ── Config ────────────────────────────────────────────────────────────────────
+let cfg = { temperature:0.7, max_tokens:2048, top_p:1.0, system:'' };
+function updateConfig() {
+  cfg.temperature = parseFloat(document.getElementById('cfg-temp').value);
+  cfg.max_tokens  = parseInt(document.getElementById('cfg-tokens').value);
+  cfg.top_p       = parseFloat(document.getElementById('cfg-topp').value);
+  cfg.system      = document.getElementById('cfg-system').value;
+  document.getElementById('cfg-temp-val').textContent   = cfg.temperature.toFixed(2);
+  document.getElementById('cfg-tokens-val').textContent = cfg.max_tokens;
+  document.getElementById('cfg-topp-val').textContent   = cfg.top_p.toFixed(2);
 }
-function setConn(cls, label) {
-  document.getElementById('conn-dot').className = 'dot ' + cls;
-  document.getElementById('conn-label').textContent = label;
+function resetConfig() {
+  cfg={temperature:0.7,max_tokens:2048,top_p:1.0,system:''};
+  document.getElementById('cfg-temp').value='0.7';
+  document.getElementById('cfg-tokens').value='2048';
+  document.getElementById('cfg-topp').value='1.0';
+  document.getElementById('cfg-system').value='';
+  updateConfig();
 }
 
-// ── OS / GPU icons ────────────────────────────────────────────────────────────
-function osIcon(os) {
-  const icons = {
-    darwin:  '<i class="fa-brands fa-apple"></i>',
-    windows: '<i class="fa-brands fa-windows"></i>',
-    linux:   '<i class="fa-brands fa-linux"></i>',
-  };
-  return icons[os] || '<i class="fa-solid fa-microchip"></i>';
+// ── Conversation history (localStorage) ──────────────────────────────────────
+const CONV_KEY = 'hivelink_conversations';
+
+function loadConversations() {
+  try { return JSON.parse(localStorage.getItem(CONV_KEY)||'[]'); } catch(_){ return []; }
+}
+function saveConversations(convs) {
+  localStorage.setItem(CONV_KEY, JSON.stringify(convs));
+}
+function getConversation(id) {
+  return loadConversations().find(c=>c.id===id)||null;
 }
 
-function gpuBrandIcon(gpuName) {
-  if (!gpuName || gpuName === '—') return '';
-  const n = gpuName.toLowerCase();
-  if (n.includes('nvidia') || n.includes('geforce') || n.includes('rtx') || n.includes('gtx') || n.includes('quadro')) {
-    // NVIDIA "eye" logo using SVG inline — Font Awesome doesn't have NVIDIA brand
-    return `<svg class="gpu-brand-icon nvidia" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color:var(--cuda);flex-shrink:0"><path d="M5.275 7.1v1.362C3.685 9.26 2.4 11.048 2.4 13.04c0 3.154 2.617 5.508 6.093 5.508 1.36 0 2.658-.38 3.73-.997v1.437c-1.09.498-2.313.793-3.73.793C4.002 19.78.74 16.88.74 13.04c0-2.66 1.547-4.97 3.8-6.145L5.275 7.1zm1.265 5.636v-1.36c.396-.164.828-.27 1.293-.27 1.84 0 2.974 1.24 2.974 3.054 0 .516-.107 1.01-.303 1.47l-1.09-1.207c.044-.17.068-.348.068-.533 0-.86-.54-1.478-1.39-1.478-.538 0-.996.14-1.322.43l-.23-.106zM7.833 4.22v1.44c-.464.05-.916.147-1.293.294V4.646A8.16 8.16 0 017.833 4.22zm0 13.79v1.44a7.97 7.97 0 01-1.293-.294v-1.314c.38.148.83.12 1.293.168zM9.48 4.1C13.845 4.374 17.01 7.7 17.01 12c0 4.3-3.165 7.627-7.53 7.9v-1.44C13.01 18.196 15.59 15.44 15.59 12c0-3.44-2.58-6.195-6.11-6.46V4.1zm6.667 3.074l1.39 1.537A8.34 8.34 0 0118.6 12c0 1.235-.27 2.41-.756 3.46l-1.382-1.53A6.72 6.72 0 0016.93 12c0-.992-.2-1.937-.555-2.788l-.23-.038z"/></svg>`;
-  }
-  if (n.includes('amd') || n.includes('radeon') || n.includes('rx ')) {
-    return `<span class="gpu-brand-icon amd" style="font-size:11px;font-weight:700;color:var(--rocm)">AMD</span>`;
-  }
-  if (n.includes('apple') || n.includes('m1') || n.includes('m2') || n.includes('m3') || n.includes('m4')) {
-    return `<i class="fa-brands fa-apple gpu-brand-icon apple"></i>`;
-  }
-  return '';
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const fmtMem   = mb  => !mb ? '0' : mb >= 1024 ? (mb/1024).toFixed(1)+' GB' : mb+' MB';
-const backBadge = b  => `<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
-const COLORS = ['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
-
-// ── Cluster ──────────────────────────────────────────────────────────────────
-function renderCluster() {
-  const tbody = document.getElementById('node-tbody');
-  if (!peers.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">
-      <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="font-size:28px;color:var(--muted2)"></i></div>
-      <div class="empty-title">No nodes yet</div>
-      <div class="empty-sub">Run <code>hivelink start</code> on each machine on your LAN</div>
-    </div></td></tr>`;
+function renderConvList() {
+  const convs = loadConversations();
+  const list  = document.getElementById('conv-list');
+  if (!convs.length) {
+    list.innerHTML = `<div style="padding:8px 16px;font-size:11px;color:var(--muted2)">No conversations yet</div>`;
     return;
   }
-  const sorted = [...peers].sort((a,b) => {
-    if (a.is_self && !b.is_self) return -1;
-    if (!a.is_self && b.is_self) return 1;
-    return (b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
-  });
-  const totalMem = sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
-  tbody.innerHTML = sorted.map(p => {
-    const hw      = p.hardware||{};
-    const mem     = hw.total_vram_mb||hw.ram_mb||0;
-    const pct     = totalMem>0 ? Math.round(mem/totalMem*100) : 0;
-    const backend = hw.primary_backend||'cpu';
-    const gpus    = (hw.gpus||[]).map(g=>g.name).join(', ')||'—';
-    const firstGpu= (hw.gpus||[])[0]?.name || '';
-    const nid     = (p.node_id||'').slice(0,12)+'…';
-    const selfTag = p.is_self ? '<span class="badge badge-self" style="margin-left:5px">this node</span>' : '';
-    return `<tr>
-      <td><div class="node-name-cell">
-        <div class="node-avatar">${osIcon(hw.node_os)}</div>
-        <div>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
-            <span class="node-id-text">${nid}</span>${selfTag}
-          </div>
-          <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div>
-        </div>
-      </div></td>
-      <td>${backBadge(backend)}</td>
-      <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
-      <td><span class="tflops-text">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
-      <td><div class="gpu-cell">${gpuBrandIcon(firstGpu)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">${gpus}</span></div></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Sidebar + header ─────────────────────────────────────────────────────────
-function updateSidebar() {
-  const totalMem    = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
-  const totalTflops = peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
-  const maxB = totalMem>0 ? Math.floor(totalMem*1024*1024*0.9/0.5/1e9) : 0;
-  const gpuN = peers.filter(p=>(p.hardware?.total_vram_mb||0)>0).length;
-  document.getElementById('ss-nodes').textContent   = peers.length||'—';
-  document.getElementById('ss-mem').textContent     = fmtMem(totalMem)||'—';
-  document.getElementById('ss-mem-sub').textContent = gpuN ? `across ${gpuN} GPU node(s)` : 'system RAM';
-  document.getElementById('ss-tflops').textContent  = totalTflops ? totalTflops.toFixed(1) : '—';
-  document.getElementById('ss-maxmodel').textContent= maxB>=1 ? maxB+'B params' : '—';
-}
-function updateHeaderStats() {
-  const totalMem    = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
-  const totalTflops = peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
-  document.getElementById('hs-nodes').textContent  = peers.length||'—';
-  document.getElementById('hs-mem').textContent    = fmtMem(totalMem)||'—';
-  document.getElementById('hs-tflops').textContent = totalTflops ? totalTflops.toFixed(1) : '—';
-}
-
-// ── Models ───────────────────────────────────────────────────────────────────
-async function fetchModels() {
-  try {
-    const res = await fetch(API_BASE+'/api/models');
-    models = (await res.json()).models||[];
-    renderModels(); updateChatModelSelect();
-  } catch(_) {}
-}
-
-function renderModels() {
-  const grid = document.getElementById('models-grid');
-  if (!models.length) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>`;
-    return;
-  }
-  const totalMem = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
-  grid.innerHTML = models.map((m,i) => {
-    const sz   = m.size_mb && m.size_mb>=1024 ? (m.size_mb/1024).toFixed(1)+' GB' : m.size_mb ? m.size_mb+' MB' : '';
-    const pct  = totalMem>0 && m.size_mb ? Math.min(100,Math.round(m.size_mb/totalMem*100)) : 30;
-    const color= COLORS[i%COLORS.length];
-    const sel  = selectedModel===m.model_id ? ' selected' : '';
-    const pill = m.live
-      ? `<span class="live-pill">● live</span>`
-      : `<span class="quant-pill">Q${m.quant_bits}</span>`;
-    return `<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits||4})">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
-        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b ? m.params_b+'B parameters' : 'loaded in inference engine'}</div></div>
-        ${pill}
-      </div>
-      <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers ? m.layers+' layers' : ''}</span></div>
+  list.innerHTML = convs.slice().reverse().map(c => {
+    const active = c.id===activeConvId ? ' active-conv' : '';
+    const time   = new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const preview= c.messages.find(m=>m.role==='user')?.content?.slice(0,32)||'Empty';
+    return `<div class="conv-item${active}" onclick="loadConversation('${c.id}')">
+      <i class="fa-regular fa-comment" style="font-size:11px;flex-shrink:0;color:var(--muted2)"></i>
+      <span class="conv-item-text" title="${preview}">${preview}</span>
+      <span class="conv-item-time">${time}</span>
+      <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')" title="Delete">✕</span>
     </div>`;
   }).join('');
 }
 
-async function selectModel(modelId, quantBits) {
-  selectedModel = modelId;
-  renderModels();
-  try {
-    const res = await fetch(`${API_BASE}/api/plan/${modelId}?quant_bits=${quantBits}`);
-    if (!res.ok) return;
-    renderPlan(await res.json());
-  } catch(_) {}
+function newConversation() {
+  activeConvId = null;
+  chatHistory  = [];
+  clearChatUI();
+  document.querySelectorAll('.conv-item').forEach(el=>el.classList.remove('active-conv'));
+  // Switch to chat page
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[data-page="chat"]').classList.add('active');
+  document.getElementById('page-chat').classList.add('active');
 }
 
-function renderPlan(plan) {
-  const container = document.getElementById('plan-container');
-  container.style.display = 'block';
-  document.getElementById('plan-title').textContent = `${plan.model_id} — layer distribution`;
-  document.getElementById('plan-meta').textContent  = `${plan.total_layers} layers · ${plan.total_params_b}B params · Q${plan.quant_bits} · ${plan.node_count} node(s)`;
-  document.getElementById('plan-assignments').innerHTML = (plan.assignments||[]).map((a,i) => {
-    const color = COLORS[i%COLORS.length];
-    const pct   = Math.round(a.layer_count/plan.total_layers*100);
-    const start = (a.layer_start/plan.total_layers*100).toFixed(1);
-    const peer  = peers.find(p=>p.node_id===a.node_id);
-    return `<div class="layer-assignment">
-      <div class="layer-header">
-        <span class="layer-node-id">${osIcon(peer?.hardware?.node_os)} ${a.node_id.slice(0,10)}…</span>
-        <span class="layer-range">layers ${a.layer_start}–${a.layer_end} · ${a.layer_count} layers</span>
+function loadConversation(id) {
+  const conv = getConversation(id);
+  if (!conv) return;
+  activeConvId = id;
+  chatHistory  = [...conv.messages];
+  clearChatUI();
+  // Replay messages
+  const msgs = document.getElementById('chat-messages');
+  chatHistory.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `chat-bubble ${m.role}`;
+    div.innerHTML = m.role==='user' ? escapeHtml(m.content) : formatMessage(m.content);
+    msgs.appendChild(div);
+  });
+  msgs.scrollTop = msgs.scrollHeight;
+  renderConvList();
+  // Switch to chat
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[data-page="chat"]').classList.add('active');
+  document.getElementById('page-chat').classList.add('active');
+}
+
+function saveCurrentConversation() {
+  if (!chatHistory.length) return;
+  const convs = loadConversations();
+  if (activeConvId) {
+    const idx = convs.findIndex(c=>c.id===activeConvId);
+    if (idx>=0) { convs[idx].messages=chatHistory; convs[idx].updatedAt=Date.now(); }
+    else activeConvId=null;
+  }
+  if (!activeConvId) {
+    activeConvId = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    convs.push({ id:activeConvId, messages:chatHistory, createdAt:Date.now(), updatedAt:Date.now() });
+  }
+  saveConversations(convs);
+  renderConvList();
+}
+
+function deleteConversation(id) {
+  const convs = loadConversations().filter(c=>c.id!==id);
+  saveConversations(convs);
+  if (activeConvId===id) { activeConvId=null; chatHistory=[]; clearChatUI(); }
+  renderConvList();
+}
+
+function clearAllConversations() {
+  if (!confirm('Clear all conversation history?')) return;
+  localStorage.removeItem(CONV_KEY);
+  activeConvId=null; chatHistory=[]; clearChatUI();
+  renderConvList();
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-'+item.dataset.page).classList.add('active');
+  });
+});
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connect() {
+  ws = new WebSocket(`${WS_BASE}/ws/cluster`);
+  ws.onopen  = ()=>setConn('live','live');
+  ws.onclose = ()=>{setConn('error','offline');setTimeout(connect,3000)};
+  ws.onerror = ()=>setConn('error','error');
+  ws.onmessage = e => {
+    try {
+      const msg=JSON.parse(e.data);
+      if(msg.type==='cluster_update'){
+        peers=msg.peers||[];
+        renderNodeCards();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();
+      }
+    }catch(_){}
+  };
+}
+function setConn(cls,label){
+  document.getElementById('conn-dot').className='dot '+cls;
+  document.getElementById('conn-label').textContent=label;
+}
+
+// ── Brand icons ───────────────────────────────────────────────────────────────
+function osIcon(os){
+  return{darwin:'<i class="fa-brands fa-apple"></i>',windows:'<i class="fa-brands fa-windows"></i>',linux:'<i class="fa-brands fa-linux"></i>'}[os]||'<i class="fa-solid fa-microchip"></i>';
+}
+function gpuBrandHtml(name){
+  if(!name)return'';const n=name.toLowerCase();
+  if(n.includes('nvidia')||n.includes('geforce')||n.includes('rtx')||n.includes('gtx')||n.includes('a100')||n.includes('h100'))
+    return`<svg width="13" height="13" viewBox="0 0 24 24" fill="#76b900"><path d="M11.927 0C8.4.016 4.944 1.472 2.4 4.08L11.952 4.08v.768L2.064 4.848C1.344 5.7.72 6.648.24 7.68L11.952 7.68v.768H0A12 12 0 0 0 0 12h11.952v.768H.24a11.92 11.92 0 0 0 .768 2.256L11.952 15.024v.768L2.4 15.792A11.935 11.935 0 0 0 11.927 24C18.554 24 24 18.627 24 12S18.554 0 11.927 0zm.025 6.768v10.464c-3.216-.24-5.712-2.928-5.712-5.232 0-2.304 2.496-4.992 5.712-5.232z"/></svg>`;
+  if(n.includes('amd')||n.includes('radeon')||n.includes('rx '))
+    return`<svg width="13" height="13" viewBox="0 0 24 24" fill="#e8534f"><path d="M.38 0h6.552L12 6.158 17.068 0h6.552L12 13.174zm0 24l4.586-5.18H19.034L23.62 24z"/></svg>`;
+  if(n.includes('apple')||n.includes(' m1')||n.includes(' m2')||n.includes(' m3')||n.includes(' m4'))
+    return`<i class="fa-brands fa-apple" style="color:var(--metal);font-size:13px"></i>`;
+  if(n.includes('intel')||n.includes('arc')||n.includes('iris'))
+    return`<svg width="13" height="13" viewBox="0 0 24 24" fill="#0071c5"><path d="M11.99 0C5.368 0 0 5.368 0 11.99 0 18.616 5.368 24 11.99 24 18.616 24 24 18.616 24 11.99 24 5.368 18.616 0 11.99 0zm-1.054 6.496h2.126v8.248h-2.126zm-3.39 2.21h2.126v6.037H7.546zm6.782 0h2.126v6.037h-2.126z"/></svg>`;
+  if(n.includes('tenstorrent'))return`<span style="font-size:9px;font-weight:700;color:#ff6b35;font-family:var(--mono)">TT</span>`;
+  return'';
+}
+function cpuBrandHtml(name){
+  if(!name)return'<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
+  const n=name.toLowerCase();
+  if(n.includes('intel'))return`<svg width="13" height="13" viewBox="0 0 24 24" fill="#0071c5"><path d="M11.99 0C5.368 0 0 5.368 0 11.99 0 18.616 5.368 24 11.99 24 18.616 24 24 18.616 24 11.99 24 5.368 18.616 0 11.99 0zm-1.054 6.496h2.126v8.248h-2.126zm-3.39 2.21h2.126v6.037H7.546zm6.782 0h2.126v6.037h-2.126z"/></svg>`;
+  if(n.includes('amd')||n.includes('ryzen')||n.includes('epyc'))return`<svg width="13" height="13" viewBox="0 0 24 24" fill="#e8534f"><path d="M.38 0h6.552L12 6.158 17.068 0h6.552L12 13.174zm0 24l4.586-5.18H19.034L23.62 24z"/></svg>`;
+  if(n.includes('apple')||n.includes('arm'))return`<i class="fa-brands fa-apple" style="color:var(--metal);font-size:13px"></i>`;
+  return'<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
+}
+
+// ── Model logos ───────────────────────────────────────────────────────────────
+const MODEL_META={
+  llama:{bg:'#0064e0',icon:'<svg width="13" height="13" viewBox="0 0 40 40" fill="white"><path d="M20 4C11.16 4 4 11.16 4 20s7.16 16 16 16 16-7.16 16-16S28.84 4 20 4zm-2 22h-4V14h4v12zm6 0h-4V14h4v12z"/></svg>'},
+  qwen:{bg:'#7B3FE4',icon:'<span style="color:#fff;font-size:10px;font-weight:700">Q</span>'},
+  mistral:{bg:'#f54e42',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M2 4h4v4H2zm8 0h4v4h-4zm8 0h4v4h-4zM2 10h4v4H2zm8 4h4v4h-4zM2 16h4v4H2zm16 0h4v4h-4z"/></svg>'},
+  mixtral:{bg:'#f54e42',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M2 4h4v4H2zm8 0h4v4h-4zm8 0h4v4h-4zM2 10h4v4H2zm8 4h4v4h-4zM2 16h4v4H2zm16 0h4v4h-4z"/></svg>'},
+  deepseek:{bg:'#4d6bfe',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7v10l10 5 10-5V7z"/></svg>'},
+  gemma:{bg:'#4285f4',icon:'<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>'},
+  default:{bg:'#30363d',icon:'<i class="fa-solid fa-cube" style="color:#7d8590;font-size:10px"></i>'},
+};
+function modelMeta(id){
+  const k=id.toLowerCase();
+  for(const[key,val]of Object.entries(MODEL_META)){if(key!=='default'&&k.includes(key))return val;}
+  return MODEL_META.default;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmtMem=mb=>!mb?'0':mb>=1024?(mb/1024).toFixed(1)+' GB':mb+' MB';
+const backBadge=b=>`<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
+
+// ── EXO-style node cards ──────────────────────────────────────────────────────
+function renderNodeCards(){
+  const wrap=document.getElementById('node-cards-wrap');
+  if(!peers.length){
+    wrap.innerHTML=`<div class="cluster-empty"><div class="empty">
+      <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
+      <div class="empty-title">No nodes yet</div>
+      <div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div>
+    </div></div>`;return;
+  }
+  const sorted=[...peers].sort((a,b)=>{
+    if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;
+    return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
+  });
+  const totalMem=sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+
+  wrap.innerHTML=`<div class="cluster-nodes-grid">${sorted.map((p,i)=>{
+    const hw=p.hardware||{};
+    const mem=hw.total_vram_mb||hw.ram_mb||0;
+    const memPct=totalMem>0?Math.round(mem/totalMem*100):0;
+    const backend=hw.primary_backend||'cpu';
+    const color=COLORS[i%COLORS.length];
+    const firstGpu=(hw.gpus||[])[0]?.name||'';
+    const gpuLabel=(hw.gpus||[]).map(g=>g.name).join(', ')||'CPU inference';
+    const osName={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||hw.node_os||'?';
+    const selfBadge=p.is_self?`<span class="node-card-self">this node</span>`:'';
+    const tflops=(hw.total_fp16_tflops||0).toFixed(1);
+    return`<div class="node-card" style="border-top:2px solid ${color}">
+      <div class="node-card-header">
+        <div class="node-card-name">
+          ${osIcon(hw.node_os)}
+          <span>${osName}</span>
+          ${selfBadge}
+        </div>
+        ${backBadge(backend)}
       </div>
-      <div class="layer-track">
-        <div class="layer-fill" style="left:${start}%;width:${pct}%;background:${color}18;border-right:2px solid ${color};color:${color}">
-          ${pct}% · ${fmtMem(a.vram_mb)}
+      <div class="node-card-body">
+        <div>
+          <div class="node-stat-row">
+            <span class="node-stat-label">Memory</span>
+            <span class="node-stat-val" style="color:${color}">${fmtMem(mem)}</span>
+          </div>
+          <div class="node-mem-track">
+            <div class="node-mem-fill" style="width:${memPct}%;background:${color}"></div>
+          </div>
+        </div>
+        <div class="node-stat-row">
+          <span class="node-stat-label">TFLOPS</span>
+          <span class="node-stat-val">${tflops}</span>
+        </div>
+        <div class="node-stat-row">
+          <span class="node-stat-label">CPU</span>
+          <span class="node-stat-val" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${hw.cpu_name||'?'}</span>
         </div>
       </div>
+      <div class="node-card-footer">
+        <div style="display:flex;align-items:center;gap:5px">${gpuBrandHtml(firstGpu)}<span class="node-gpu-name">${gpuLabel}</span></div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">${p.hostname||''}</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderNodeTable(){
+  const tbody=document.getElementById('node-tbody');
+  if(!peers.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="padding:0"><div class="empty">
+      <div class="empty-title">No nodes</div><div class="empty-sub">Run <code>hivelink start</code> on each machine</div>
+    </div></td></tr>`;return;
+  }
+  const sorted=[...peers].sort((a,b)=>{
+    if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;
+    return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
+  });
+  const totalMem=sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  tbody.innerHTML=sorted.map(p=>{
+    const hw=p.hardware||{};
+    const mem=hw.total_vram_mb||hw.ram_mb||0;
+    const pct=totalMem>0?Math.round(mem/totalMem*100):0;
+    const firstGpu=(hw.gpus||[])[0]?.name||'';
+    const gpus=(hw.gpus||[]).map(g=>g.name).join(', ')||'—';
+    const self=p.is_self?'<span class="badge badge-self" style="margin-left:5px">this node</span>':'';
+    return`<tr>
+      <td><div class="node-name-cell">
+        <div class="node-avatar">${osIcon(hw.node_os)}</div>
+        <div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+            <span class="node-id-text">${(p.node_id||'').slice(0,12)}…</span>${self}
+          </div>
+          <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div>
+        </div>
+      </div></td>
+      <td>${backBadge(hw.primary_backend||'cpu')}</td>
+      <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
+      <td><span style="font-family:var(--mono);font-size:12px">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
+      <td><div class="gpu-cell">${gpuBrandHtml(firstGpu)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;margin-left:4px">${gpus}</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Hardware tab ──────────────────────────────────────────────────────────────
+function renderHardware(){
+  const grid=document.getElementById('hw-grid');
+  if(!peers.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-microchip" style="color:var(--muted2)"></i></div><div class="empty-title">No nodes connected</div></div>`;return;}
+  const sorted=[...peers].sort((a,b)=>{if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);});
+  grid.innerHTML=sorted.map((p,i)=>{
+    const hw=p.hardware||{};
+    const os={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||hw.node_os||'?';
+    const color=COLORS[i%COLORS.length];
+    const gpus=hw.gpus||[];
+    const self=p.is_self?`<span class="badge badge-self hw-self-badge">this node</span>`:'';
+    const gpuRows=gpus.length?gpus.map(g=>`<div class="hw-gpu-row">
+      <div class="hw-gpu-name">${gpuBrandHtml(g.name)}<span style="margin-left:4px">${g.name}</span></div>
+      <div class="hw-gpu-specs"><span>${fmtMem(g.vram_mb)} VRAM</span><span>~${g.fp16_tflops} TFLOPS</span>${backBadge(g.backend)}</div>
+    </div>`).join(''):`<div style="font-size:11px;color:var(--muted);margin-top:6px">No GPU — CPU inference only</div>`;
+    return`<div class="hw-card" style="border-top:2px solid ${color}">
+      <div class="hw-card-header">
+        <div class="hw-card-os-icon">${osIcon(hw.node_os)}</div>
+        <div><div class="hw-card-title">${os} · ${(p.node_id||'').slice(0,10)}…</div><div class="hw-card-sub">${p.hostname||'—'}</div></div>
+        ${self}
+      </div>
+      <div class="hw-rows">
+        <div class="hw-row"><div class="hw-row-icon">${cpuBrandHtml(hw.cpu_name)}</div>
+          <div><div class="hw-row-label">CPU</div><div class="hw-row-value">${hw.cpu_name||'Unknown'}</div><div class="hw-row-sub">${hw.cpu_cores||'?'} physical cores</div></div></div>
+        <div class="hw-row"><div class="hw-row-icon"><i class="fa-solid fa-memory" style="color:var(--accent)"></i></div>
+          <div><div class="hw-row-label">System RAM</div><div class="hw-row-value">${fmtMem(hw.ram_mb)}</div></div></div>
+        <div class="hw-row"><div class="hw-row-icon"><i class="fa-solid fa-layer-group" style="color:var(--purple)"></i></div>
+          <div style="width:100%"><div class="hw-row-label">GPU${gpus.length!==1?'s':''}</div>${gpuRows}</div></div>
+        <div class="hw-row"><div class="hw-row-icon" style="font-size:9px;font-weight:700">${backBadge(hw.primary_backend||'cpu')}</div>
+          <div><div class="hw-row-label">Backend</div><div class="hw-row-value">${(hw.primary_backend||'cpu').toUpperCase()}</div>
+          <div class="hw-row-sub">${hw.total_fp16_tflops?'~'+hw.total_fp16_tflops.toFixed(1)+' FP16 TFLOPS':'CPU only'}</div></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+async function fetchModels(){
+  try{const res=await fetch(API_BASE+'/api/models');models=(await res.json()).models||[];renderModels();updateChatModelSelect();}catch(_){}
+}
+function renderModels(){
+  const grid=document.getElementById('models-grid');
+  if(!models.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-cube" style="color:var(--muted2)"></i></div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>`;return;}
+  const totalMem=peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  grid.innerHTML=models.map((m,i)=>{
+    const meta=modelMeta(m.model_id);
+    const sz=m.size_mb&&m.size_mb>=1024?(m.size_mb/1024).toFixed(1)+' GB':m.size_mb?m.size_mb+' MB':'';
+    const pct=totalMem>0&&m.size_mb?Math.min(100,Math.round(m.size_mb/totalMem*100)):30;
+    const color=COLORS[i%COLORS.length];
+    const sel=selectedModel===m.model_id?' selected':'';
+    const pill=m.live?`<span class="live-pill">● live</span>`:`<span class="quant-pill">Q${m.quant_bits}</span>`;
+    return`<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits||4})">
+      <div class="model-header-row"><div class="model-logo" style="background:${meta.bg}">${meta.icon}</div>
+        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b+'B params':'loaded'}</div></div>${pill}</div>
+      <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span></div>
+    </div>`;
+  }).join('');
+}
+async function selectModel(modelId,quantBits){
+  selectedModel=modelId;renderModels();
+  try{const res=await fetch(`${API_BASE}/api/plan/${modelId}?quant_bits=${quantBits}`);if(!res.ok)return;renderPlan(await res.json());}catch(_){}
+}
+function renderPlan(plan){
+  const container=document.getElementById('plan-container');container.style.display='block';
+  document.getElementById('plan-title').textContent=`${plan.model_id} — layer distribution`;
+  document.getElementById('plan-meta').textContent=`${plan.total_layers} layers · ${plan.total_params_b}B · Q${plan.quant_bits} · ${plan.node_count} node(s)`;
+  document.getElementById('plan-assignments').innerHTML=(plan.assignments||[]).map((a,i)=>{
+    const color=COLORS[i%COLORS.length];
+    const pct=Math.round(a.layer_count/plan.total_layers*100);
+    const start=(a.layer_start/plan.total_layers*100).toFixed(1);
+    const peer=peers.find(p=>p.node_id===a.node_id);
+    return`<div class="layer-assignment">
+      <div class="layer-header"><span class="layer-node-id">${osIcon(peer?.hardware?.node_os)} ${a.node_id.slice(0,10)}…</span>
+      <span class="layer-range">layers ${a.layer_start}–${a.layer_end} · ${a.layer_count} layers</span></div>
+      <div class="layer-track"><div class="layer-fill" style="left:${start}%;width:${pct}%;background:${color}18;border-right:2px solid ${color};color:${color}">${pct}% · ${fmtMem(a.vram_mb)}</div></div>
       <div class="layer-stats">${backBadge(a.backend)}<span style="margin-left:4px">${a.api_url}</span></div>
     </div>`;
   }).join('');
   container.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-// ── Chat ─────────────────────────────────────────────────────────────────────
-function updateChatModelSelect() {
-  const sel = document.getElementById('chat-model-select');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— select model —</option>' +
-    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${m.live ? ' ● live' : ' (Q'+m.quant_bits+')'}</option>`).join('');
+// ── Chat ──────────────────────────────────────────────────────────────────────
+function updateChatModelSelect(){
+  const sel=document.getElementById('chat-model-select');const cur=sel.value;
+  sel.innerHTML='<option value="">— select model —</option>'+
+    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${m.live?' ● live':' (Q'+m.quant_bits+')'}</option>`).join('');
+}
+function clearChatUI(){
+  document.getElementById('chat-messages').innerHTML='<div data-placeholder style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>';
+}
+function clearChat(){chatHistory=[];activeConvId=null;clearChatUI();}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function formatMessage(text){
+  text=text.replace(/<think>[\s\S]*?<\/think>/gi,'');
+  text=text.replace(/```(\w*)\n?([\s\S]*?)```/g,(_,l,c)=>`<pre><code>${escapeHtml(c.trim())}</code></pre>`);
+  text=text.replace(/`([^`]+)`/g,(_,c)=>`<code>${escapeHtml(c)}</code>`);
+  text=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  text=text.replace(/\n/g,'<br>');return text;
 }
 
-function clearChat() {
-  chatHistory = [];
-  document.getElementById('chat-messages').innerHTML =
-    '<div style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>';
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function formatMessage(text) {
-  // Extract and hide <think> blocks — show them in the thinking box instead
-  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
-  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code)=>`<pre><code>${escapeHtml(code.trim())}</code></pre>`);
-  text = text.replace(/`([^`]+)`/g, (_,c)=>`<code>${escapeHtml(c)}</code>`);
-  text = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  text = text.replace(/\n/g,'<br>');
-  return text;
-}
-
-function appendBubble(role, id) {
-  const msgs = document.getElementById('chat-messages');
-  const placeholder = msgs.querySelector('[data-placeholder]');
-  if (placeholder) placeholder.remove();
-
-  const div = document.createElement('div');
-  div.className = `chat-bubble ${role}`;
-  if (id) div.id = id;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-  return div;
-}
-
-async function sendMessage() {
-  if (chatStreaming) return;
-  const input    = document.getElementById('chat-input');
-  const modelSel = document.getElementById('chat-model-select');
-  const text     = input.value.trim();
-  const model    = modelSel.value;
-
-  if (!model) { document.getElementById('no-model-warn').style.display='block'; return; }
+async function sendMessage(){
+  if(chatStreaming)return;
+  const input=document.getElementById('chat-input');
+  const modelSel=document.getElementById('chat-model-select');
+  const text=input.value.trim();const model=modelSel.value;
+  if(!model){document.getElementById('no-model-warn').style.display='block';return;}
   document.getElementById('no-model-warn').style.display='none';
-  if (!text) return;
+  if(!text)return;
+  input.value='';input.style.height='auto';
+  chatHistory.push({role:'user',content:text});
 
-  input.value = ''; input.style.height = 'auto';
-  chatHistory.push({role:'user', content:text});
+  const msgs=document.getElementById('chat-messages');
+  const placeholder=msgs.querySelector('[data-placeholder]');if(placeholder)placeholder.remove();
+  const userDiv=document.createElement('div');userDiv.className='chat-bubble user';userDiv.textContent=text;msgs.appendChild(userDiv);
 
-  // User bubble
-  const userDiv = appendBubble('user', null);
-  userDiv.textContent = text;
+  const replyId='reply-'+Date.now();
+  const replyDiv=document.createElement('div');replyDiv.className='chat-bubble assistant';replyDiv.id=replyId;
+  replyDiv.innerHTML=`<div class="thinking-wrap"><div class="thinking-dots"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div>
+    <div id="${replyId}-tb" class="thinking-text"><div class="thinking-label">Thinking</div><div id="${replyId}-tc"></div></div></div>`;
+  msgs.appendChild(replyDiv);msgs.scrollTop=msgs.scrollHeight;
 
-  // Assistant bubble with Grok-style thinking UI
-  const replyId  = 'reply-' + Date.now();
-  const replyDiv = appendBubble('assistant', replyId);
+  chatStreaming=true;document.getElementById('chat-send').disabled=true;
+  let fullText='',thinkText='',responseStarted=false;
 
-  replyDiv.innerHTML = `
-    <div class="thinking-wrap">
-      <div class="thinking-dots">
-        <div class="thinking-dot"></div>
-        <div class="thinking-dot"></div>
-        <div class="thinking-dot"></div>
-      </div>
-      <div id="${replyId}-think-box" class="thinking-text">
-        <div class="thinking-label">Thinking</div>
-        <div id="${replyId}-think-content"></div>
-      </div>
-    </div>
-  `;
+  // Build messages array including optional system prompt
+  const systemMsg=cfg.system.trim()?[{role:'system',content:cfg.system}]:[];
+  const payload={
+    model,messages:[...systemMsg,...chatHistory],stream:true,
+    temperature:cfg.temperature,max_tokens:cfg.max_tokens,top_p:cfg.top_p
+  };
 
-  chatStreaming = true;
-  document.getElementById('chat-send').disabled = true;
-
-  let fullText    = '';
-  let thinkText   = '';
-  let inThink     = false;
-  let responseStarted = false;
-
-  try {
-    const res = await fetch(`${API_BASE}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({model, messages:chatHistory, stream:true, max_tokens:2048}),
+  try{
+    const res=await fetch(`${API_BASE}/v1/chat/completions`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({detail:'Unknown error'}));
-      replyDiv.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
-      chatStreaming = false;
-      document.getElementById('chat-send').disabled = false;
-      return;
+    if(!res.ok){
+      const err=await res.json().catch(()=>({detail:'Unknown error'}));
+      replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
+      chatStreaming=false;document.getElementById('chat-send').disabled=false;return;
     }
-
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    const msgs    = document.getElementById('chat-messages');
-
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      const lines = decoder.decode(value).split('\n');
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const chunk = line.slice(6).trim();
-        if (chunk === '[DONE]') break;
-        try {
-          const parsed = JSON.parse(chunk);
-          const delta  = parsed.choices?.[0]?.delta?.content || '';
-          if (!delta) continue;
-
-          fullText += delta;
-
-          // Detect <think>...</think> blocks for chain-of-thought display
-          let display = fullText;
-
-          // Extract think content
-          const thinkMatch = fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
-          if (thinkMatch) {
-            thinkText = thinkMatch[1];
-            const thinkBox     = document.getElementById(`${replyId}-think-box`);
-            const thinkContent = document.getElementById(`${replyId}-think-content`);
-            if (thinkBox && thinkContent) {
-              thinkBox.classList.add('has-content');
-              thinkContent.textContent = thinkText;
-              thinkBox.scrollTop = thinkBox.scrollHeight;
+    const reader=res.body.getReader(),decoder=new TextDecoder();
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      for(const line of decoder.decode(value).split('\n')){
+        if(!line.startsWith('data: '))continue;
+        const chunk=line.slice(6).trim();if(chunk==='[DONE]')break;
+        try{
+          const delta=JSON.parse(chunk).choices?.[0]?.delta?.content||'';if(!delta)continue;
+          fullText+=delta;
+          const thinkMatch=fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
+          if(thinkMatch){
+            thinkText=thinkMatch[1];
+            const tb=document.getElementById(`${replyId}-tb`);
+            const tc=document.getElementById(`${replyId}-tc`);
+            if(tb&&tc){tb.classList.add('has-content');tc.textContent=thinkText;tb.scrollTop=tb.scrollHeight;}
+          }
+          const display=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/i,'').trim();
+          if(display){
+            if(!responseStarted){
+              responseStarted=true;
+              const existThink=replyDiv.querySelector('.thinking-text');
+              const clone=existThink?existThink.cloneNode(true):null;
+              replyDiv.innerHTML=formatMessage(display);
+              if(clone&&thinkText){clone.style.marginBottom='10px';replyDiv.insertBefore(clone,replyDiv.firstChild);}
+            }else{
+              const existThink=replyDiv.querySelector('.thinking-text');
+              replyDiv.innerHTML=formatMessage(display);
+              if(existThink)replyDiv.insertBefore(existThink,replyDiv.firstChild);
             }
           }
-
-          // Remove think block from main display
-          display = fullText
-            .replace(/<think>[\s\S]*?<\/think>/gi, '')
-            .replace(/<think>[\s\S]*/i, '') // still inside think block
-            .trim();
-
-          if (display) {
-            if (!responseStarted) {
-              // Replace dots with actual response
-              responseStarted = true;
-              replyDiv.innerHTML = formatMessage(display);
-              if (thinkText) {
-                // Re-append the thinking box above the response
-                const thinkEl = document.createElement('div');
-                thinkEl.innerHTML = `
-                  <div class="thinking-text has-content" style="margin-bottom:10px">
-                    <div class="thinking-label">Thought process</div>
-                    <div>${escapeHtml(thinkText)}</div>
-                  </div>`;
-                replyDiv.insertBefore(thinkEl.firstElementChild, replyDiv.firstChild);
-              }
-            } else {
-              // Update existing response — preserve think box if present
-              const existingThink = replyDiv.querySelector('.thinking-text');
-              replyDiv.innerHTML = formatMessage(display);
-              if (existingThink) replyDiv.insertBefore(existingThink, replyDiv.firstChild);
-            }
-          } else if (!responseStarted) {
-            // Still in think block — keep dots animated, update think box
-            const thinkContent = document.getElementById(`${replyId}-think-content`);
-            if (thinkContent) thinkContent.textContent = thinkText;
-          }
-
-          msgs.scrollTop = msgs.scrollHeight;
-        } catch(_) {}
+          msgs.scrollTop=msgs.scrollHeight;
+        }catch(_){}
       }
     }
-
-    // Final render — clean up
-    const finalDisplay = fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
-    if (finalDisplay) {
-      const existingThink = replyDiv.querySelector('.thinking-text');
-      replyDiv.innerHTML = formatMessage(finalDisplay);
-      if (thinkText && existingThink) {
-        existingThink.querySelector('div:last-child').textContent = thinkText;
-        replyDiv.insertBefore(existingThink, replyDiv.firstChild);
-      } else if (thinkText) {
-        const thinkEl = document.createElement('div');
-        thinkEl.className = 'thinking-text has-content';
-        thinkEl.style.marginBottom = '10px';
-        thinkEl.innerHTML = `<div class="thinking-label">Thought process</div><div>${escapeHtml(thinkText)}</div>`;
-        replyDiv.insertBefore(thinkEl, replyDiv.firstChild);
+    const final=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
+    if(final){
+      const existThink=replyDiv.querySelector('.thinking-text');
+      replyDiv.innerHTML=formatMessage(final);
+      if(thinkText){
+        const tbox=document.createElement('div');tbox.className='thinking-text has-content';tbox.style.marginBottom='10px';
+        tbox.innerHTML=`<div class="thinking-label">Thought process</div><div>${escapeHtml(thinkText)}</div>`;
+        if(existThink){existThink.innerHTML=tbox.innerHTML;replyDiv.insertBefore(existThink,replyDiv.firstChild);}
+        else replyDiv.insertBefore(tbox,replyDiv.firstChild);
       }
-    } else if (!finalDisplay && !thinkText) {
-      replyDiv.innerHTML = '<span style="color:var(--muted);font-style:italic">No response</span>';
     }
-
-    chatHistory.push({role:'assistant', content: fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim()});
-
-  } catch(e) {
-    replyDiv.innerHTML = `<span style="color:var(--red)">Connection error — is llama-server / Ollama running?</span>`;
+    chatHistory.push({role:'assistant',content:fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim()});
+    saveCurrentConversation();
+  }catch(e){
+    replyDiv.innerHTML=`<span style="color:var(--red)">Connection error — is Ollama / llama-server running?</span>`;
   }
-
-  chatStreaming = false;
-  document.getElementById('chat-send').disabled = false;
+  chatStreaming=false;document.getElementById('chat-send').disabled=false;
 }
 
-// Enter to send
-document.getElementById('chat-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
-document.getElementById('chat-input').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
+document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
+document.getElementById('chat-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
 
-// Copy URL
-function copyUrl() {
-  navigator.clipboard.writeText(API_BASE).then(() => {
-    const btn = document.getElementById('copy-url-btn');
-    btn.textContent = 'Copied!'; btn.classList.add('copied');
-    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1500);
+// ── Sidebar stats ─────────────────────────────────────────────────────────────
+function updateSidebar(){
+  const totalMem=peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  const totalTf=peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
+  const maxB=totalMem>0?Math.floor(totalMem*1024*1024*0.9/0.5/1e9):0;
+  const gpuN=peers.filter(p=>(p.hardware?.total_vram_mb||0)>0).length;
+  document.getElementById('ss-nodes').textContent=peers.length||'—';
+  document.getElementById('ss-mem').textContent=fmtMem(totalMem)||'—';
+  document.getElementById('ss-mem-sub').textContent=gpuN?`across ${gpuN} GPU node(s)`:'system RAM';
+  document.getElementById('ss-tflops').textContent=totalTf?totalTf.toFixed(1):'—';
+  document.getElementById('ss-maxmodel').textContent=maxB>=1?maxB+'B params':'—';
+}
+function updateHeaderStats(){
+  const totalMem=peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
+  const totalTf=peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
+  document.getElementById('hs-nodes').textContent=peers.length||'—';
+  document.getElementById('hs-mem').textContent=fmtMem(totalMem)||'—';
+  document.getElementById('hs-tflops').textContent=totalTf?totalTf.toFixed(1):'—';
+}
+
+// ── Copy URL ──────────────────────────────────────────────────────────────────
+function copyUrl(){
+  navigator.clipboard.writeText(API_BASE).then(()=>{
+    const b=document.getElementById('copy-url-btn');b.textContent='Copied!';b.classList.add('copied');
+    setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},1500);
   });
 }
 
-// Boot
+// ── Boot ──────────────────────────────────────────────────────────────────────
+renderConvList();
 connect();
-setTimeout(() => {
-  if (!peers.length) {
+setTimeout(()=>{
+  if(!peers.length){
     fetch(API_BASE+'/api/cluster').then(r=>r.json()).then(d=>{
-      peers = d.peers||[];
-      renderCluster(); updateSidebar(); updateHeaderStats(); fetchModels();
+      peers=d.peers||[];
+      renderNodeCards();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();
     }).catch(()=>{});
   }
-}, 1200);
+},1200);
 </script>
 </body>
 </html>
