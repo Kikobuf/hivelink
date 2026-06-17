@@ -105,6 +105,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .node-card-footer{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;gap:10px;justify-content:space-between}
 .node-gpu-name{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
 
+/* EXO-style node boxes */
+.exo-node{position:absolute;width:160px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.exo-node.active-inference{border-color:var(--accent);box-shadow:0 0 0 2px rgba(47,129,247,.2);animation:pulse-border 1.5s ease-in-out infinite}
+.exo-node-header{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600}
+.exo-node-name{display:flex;align-items:center;gap:5px}
+.exo-node-body{padding:8px 9px;display:flex;flex-direction:column;gap:5px}
+.exo-util-row{display:flex;align-items:center;justify-content:space-between;font-size:10px}
+.exo-util-label{color:var(--muted);width:28px;flex-shrink:0}
+.exo-util-val{font-family:var(--mono);font-size:10px;min-width:28px;text-align:right;flex-shrink:0}
+.exo-bar-wrap{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin:0 6px}
+.exo-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.exo-badges{display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap}
+.exo-mem-text{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.exo-stat-pill{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;background:var(--surface3);border:1px solid var(--border2)}
+.exo-temp{color:var(--amber)}
+.exo-power{color:var(--muted)}
+
 /* Connection arrows between nodes */
 .cluster-viz-wrap{position:relative}
 .cluster-arrows{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
@@ -305,18 +322,20 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- Cluster -->
 <div class="page active" id="page-cluster">
   <div class="page-header"><div class="page-title">Cluster</div><div class="page-sub">Devices on your LAN — discovered automatically via UDP broadcast</div></div>
-  <div class="card" style="margin-bottom:16px">
+  <!-- EXO-style cluster web -->
+  <div class="card" style="margin-bottom:16px;overflow:visible">
     <div class="card-header">Live nodes</div>
-    <div id="node-cards-wrap">
-      <div class="cluster-empty">
-        <div class="empty">
-          <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
-          <div class="empty-title">No nodes yet</div>
-          <div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div>
-        </div>
+    <div id="cluster-viz-wrap" style="position:relative;min-height:320px;display:flex;align-items:center;justify-content:center;padding:24px">
+      <canvas id="cluster-arrows" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>
+      <div id="cluster-node-boxes" style="position:relative;width:100%;min-height:280px"></div>
+      <div id="cluster-empty-msg" class="empty" style="display:none">
+        <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
+        <div class="empty-title">No nodes yet</div>
+        <div class="empty-sub">Run <code>hivelink start</code> on each machine</div>
       </div>
     </div>
   </div>
+  <!-- Node table -->
   <div class="card">
     <table class="node-table">
       <thead><tr><th>Node</th><th>Backend</th><th style="width:190px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
@@ -613,6 +632,7 @@ function connect() {
       }
       if(msg.type==='stats_update'){
         nodeStats[msg.node_id]=msg.stats;
+        updateExoNodeStats(msg.node_id,msg.stats);
         updateNodeCardStats(msg.node_id,msg.stats);
       }
     }catch(_){}
@@ -758,95 +778,200 @@ function updateNodeCardStats(nodeId, stats){
   }
 }
 
-// ── EXO-style node cards ──────────────────────────────────────────────────────
-function renderNodeCards(){
-  const wrap=document.getElementById('node-cards-wrap');
-  if(!peers.length){
-    wrap.innerHTML=`<div class="cluster-empty"><div class="empty">
-      <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
-      <div class="empty-title">No nodes yet</div>
-      <div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div>
-    </div></div>`;return;
+// ── EXO-style cluster viz ─────────────────────────────────────────────────────
+// Positions: diamond for 2, triangle for 3, square for 4, etc.
+function getNodePositions(n, w, h) {
+  const cx = w/2, cy = h/2;
+  const rx = Math.min(cx*0.72, 220), ry = Math.min(cy*0.72, 130);
+  if(n===1) return[[cx,cy]];
+  if(n===2) return[[cx-rx,cy],[cx+rx,cy]];
+  if(n===3) return[[cx,cy-ry],[cx-rx,cy+ry*0.5],[cx+rx,cy+ry*0.5]];
+  const pts=[];
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2-Math.PI/2;
+    pts.push([cx+Math.cos(a)*rx, cy+Math.sin(a)*ry]);
   }
-  const sorted=[...peers].sort((a,b)=>{
-    if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;
-    return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
-  });
-  const totalMem=sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
-
-  wrap.innerHTML=`<div class="cluster-nodes-grid">${sorted.map((p,i)=>{
-    const hw=p.hardware||{};
-    const mem=hw.total_vram_mb||hw.ram_mb||0;
-    const memPct=totalMem>0?Math.round(mem/totalMem*100):0;
-    const backend=hw.primary_backend||'cpu';
-    const color=COLORS[i%COLORS.length];
-    const firstGpu=(hw.gpus||[])[0]?.name||'';
-    const gpuLabel=(hw.gpus||[]).map(g=>g.name).join(', ')||'CPU inference';
-    const osName={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||hw.node_os||'?';
-    const selfBadge=p.is_self?`<span class="node-card-self">this node</span>`:'';
-    const tflops=(hw.total_fp16_tflops||0).toFixed(1);
-    const existStats = nodeStats[p.node_id];
-    const gpuUtil = existStats&&existStats.gpus.length ? existStats.gpus[0].util_pct : null;
-    const temp    = existStats&&existStats.gpus.length ? existStats.gpus[0].temp_c   : null;
-    const power   = existStats&&existStats.gpus.length ? existStats.gpus[0].power_w  : null;
-    const eng     = existStats ? existStats.engine : null;
-    const cpuPct  = existStats ? existStats.cpu_pct : null;
-    return`<div class="node-card" style="border-top:2px solid ${color}" data-node-id="${p.node_id}">
-      <div class="node-card-header">
-        <div class="node-card-name">
-          ${osIcon(hw.node_os)}
-          <span>${osName}</span>
-          ${selfBadge}
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <span class="node-engine-pill ${eng||''}">${eng?engineLabel(eng):'—'}</span>
-          ${backBadge(backend)}
-        </div>
-      </div>
-      <div class="node-card-body">
-        <div>
-          <div class="node-stat-row">
-            <span class="node-stat-label">VRAM</span>
-            <span class="node-stat-val" style="color:${color}">${fmtMem(mem)}</span>
-          </div>
-          <div class="node-mem-track">
-            <div class="node-mem-fill" style="width:${memPct}%;background:${color}"></div>
-          </div>
-        </div>
-        ${gpuUtil!==null?`<div>
-          <div class="node-stat-row">
-            <span class="node-stat-label">GPU</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span class="node-stat-val stat-gpu-val">${gpuUtil.toFixed(0)}%</span>
-              ${temp!==null?`<span class="node-temp stat-temp">${temp.toFixed(0)}°C</span>`:''}
-              ${power!==null?`<span class="node-power stat-power">${power.toFixed(0)}W</span>`:''}
-            </div>
-          </div>
-          <div class="node-util-track">
-            <div class="node-util-fill stat-gpu-fill" style="width:${gpuUtil}%;background:#76b900"></div>
-          </div>
-        </div>`:''}
-        <div>
-          <div class="node-stat-row">
-            <span class="node-stat-label">CPU</span>
-            <span class="node-stat-val stat-cpu-val">${cpuPct!==null?cpuPct.toFixed(0)+'%':'—'}</span>
-          </div>
-          ${cpuPct!==null?`<div class="node-util-track"><div class="node-util-fill stat-cpu-fill" style="width:${cpuPct}%;background:${color}aa"></div></div>`:''}
-        </div>
-        <div class="node-stat-row">
-          <span class="node-stat-label">TFLOPS</span>
-          <span class="node-stat-val">${tflops}</span>
-        </div>
-      </div>
-      <div class="node-card-footer">
-        <div style="display:flex;align-items:center;gap:5px">${gpuBrandHtml(firstGpu)}<span class="node-gpu-name">${gpuLabel}</span></div>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">${p.hostname||''}</span>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  return pts;
 }
 
-function renderNodeTable(){
+function renderClusterViz() {
+  const wrap  = document.getElementById('cluster-node-boxes');
+  const empty = document.getElementById('cluster-empty-msg');
+  if(!wrap) return;
+
+  if(!peers.length){
+    wrap.style.display='none';
+    empty.style.display='flex';
+    drawArrows([]);
+    return;
+  }
+  wrap.style.display='block';
+  empty.style.display='none';
+
+  const W = wrap.offsetWidth  || 700;
+  const H = 280;
+  wrap.style.height = H+'px';
+
+  const sorted = [...peers].sort((a,b)=>{
+    if(a.is_self&&!b.is_self)return-1;
+    if(!a.is_self&&b.is_self)return 1;
+    return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
+  });
+  const positions = getNodePositions(sorted.length, W, H);
+  const BOX_W=160, BOX_H=130;
+
+  // Remove old boxes
+  wrap.querySelectorAll('.exo-node').forEach(el=>el.remove());
+
+  const boxCenters = [];
+  sorted.forEach((p,i)=>{
+    const hw      = p.hardware||{};
+    const [px,py] = positions[i];
+    const left    = Math.round(px - BOX_W/2);
+    const top     = Math.round(py - BOX_H/2);
+    const color   = COLORS[i%COLORS.length];
+    const backend = hw.primary_backend||'cpu';
+    const stats   = nodeStats[p.node_id];
+    const gpuUtil = stats&&stats.gpus.length ? stats.gpus[0].util_pct : null;
+    const temp    = stats&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
+    const power   = stats&&stats.gpus.length ? stats.gpus[0].power_w  : null;
+    const cpuPct  = stats ? stats.cpu_pct : null;
+    const eng     = stats ? stats.engine  : null;
+    const mem     = hw.total_vram_mb||hw.ram_mb||0;
+    const osName  = {darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||'Node';
+    const firstGpu= (hw.gpus||[])[0]?.name||'';
+    const selfBadge = p.is_self ? '<span class="node-card-self">this node</span>' : '';
+    const isActive  = gpuUtil!==null && gpuUtil>5;
+
+    const box = document.createElement('div');
+    box.className  = 'exo-node'+(isActive?' active-inference':'');
+    box.style.cssText = `left:${left}px;top:${top}px;border-top:2px solid ${color}`;
+    box.dataset.nodeId = p.node_id;
+    box.innerHTML = `
+      <div class="exo-node-header">
+        <div class="exo-node-name">${osIcon(hw.node_os)}<span>${osName}</span>${selfBadge}</div>
+        ${backBadge(backend)}
+      </div>
+      <div class="exo-node-body">
+        ${gpuUtil!==null?`
+        <div class="exo-util-row">
+          <span class="exo-util-label">GPU</span>
+          <div class="exo-bar-wrap"><div class="exo-bar-fill" style="width:${gpuUtil}%;background:#76b900"></div></div>
+          <span class="exo-util-val">${gpuUtil.toFixed(0)}%</span>
+        </div>`:''}
+        ${cpuPct!==null?`
+        <div class="exo-util-row">
+          <span class="exo-util-label">CPU</span>
+          <div class="exo-bar-wrap"><div class="exo-bar-fill" style="width:${cpuPct}%;background:${color}"></div></div>
+          <span class="exo-util-val">${cpuPct.toFixed(0)}%</span>
+        </div>`:''}
+        <div class="exo-util-row" style="margin-top:1px">
+          <span class="exo-mem-text">${fmtMem(mem)}</span>
+          <div class="exo-badges">
+            ${temp!==null?`<span class="exo-stat-pill exo-temp">${temp.toFixed(0)}°C</span>`:''}
+            ${power!==null?`<span class="exo-stat-pill exo-power">${power.toFixed(0)}W</span>`:''}
+            ${eng&&eng!=='none'?`<span class="node-engine-pill ${eng}">${engineLabel(eng)}</span>`:''}
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--muted2);font-family:var(--mono);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${firstGpu||hw.cpu_name||'—'}</div>
+      </div>`;
+    wrap.appendChild(box);
+    boxCenters.push({x:px, y:py, color});
+  });
+
+  // Draw arrows after boxes are placed
+  requestAnimationFrame(()=>drawArrows(boxCenters));
+}
+
+function drawArrows(centers) {
+  const canvas = document.getElementById('cluster-arrows');
+  if(!canvas) return;
+  const wrap = document.getElementById('cluster-viz-wrap');
+  canvas.width  = wrap.offsetWidth;
+  canvas.height = wrap.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(centers.length<2) return;
+
+  // Offset for the 24px padding on the viz wrap
+  const PAD = 24;
+
+  // Draw dashed arrows between every pair of nodes (like EXO)
+  for(let i=0;i<centers.length;i++){
+    for(let j=i+1;j<centers.length;j++){
+      const a = centers[i], b = centers[j];
+      const ax = a.x+PAD, ay = a.y+PAD;
+      const bx = b.x+PAD, by = b.y+PAD;
+      const midX=(ax+bx)/2, midY=(ay+by)/2;
+
+      // Line
+      ctx.beginPath();
+      ctx.setLineDash([4,4]);
+      ctx.strokeStyle='#30363d';
+      ctx.lineWidth=1;
+      ctx.moveTo(ax,ay);
+      ctx.lineTo(bx,by);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrow at midpoint pointing both ways
+      const angle = Math.atan2(by-ay,bx-ax);
+      _arrowHead(ctx,midX,midY,angle,     '#484f58');
+      _arrowHead(ctx,midX,midY,angle+Math.PI,'#484f58');
+    }
+  }
+}
+
+function _arrowHead(ctx,x,y,angle,color){
+  const size=5;
+  ctx.beginPath();
+  ctx.fillStyle=color;
+  ctx.moveTo(x+Math.cos(angle)*size,      y+Math.sin(angle)*size);
+  ctx.lineTo(x+Math.cos(angle-2.4)*size*0.7, y+Math.sin(angle-2.4)*size*0.7);
+  ctx.lineTo(x+Math.cos(angle+2.4)*size*0.7, y+Math.sin(angle+2.4)*size*0.7);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Patch live stats into existing EXO node boxes
+function updateExoNodeStats(nodeId, stats){
+  const box = document.querySelector(`.exo-node[data-node-id="${nodeId}"]`);
+  if(!box) return;
+  const gpuUtil = stats.gpus&&stats.gpus.length ? stats.gpus[0].util_pct : null;
+  const temp    = stats.gpus&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
+  const power   = stats.gpus&&stats.gpus.length ? stats.gpus[0].power_w  : null;
+  const cpuPct  = stats.cpu_pct;
+
+  const gpuBar = box.querySelector('.exo-bar-fill');
+  if(gpuBar&&gpuUtil!==null) gpuBar.style.width=gpuUtil+'%';
+  const gpuVal = box.querySelector('.exo-util-val');
+  if(gpuVal&&gpuUtil!==null) gpuVal.textContent=gpuUtil.toFixed(0)+'%';
+
+  // CPU bar (second bar)
+  const bars = box.querySelectorAll('.exo-bar-fill');
+  if(bars.length>1&&cpuPct!==null) bars[1].style.width=cpuPct+'%';
+  const vals = box.querySelectorAll('.exo-util-val');
+  if(vals.length>1&&cpuPct!==null) vals[1].textContent=cpuPct.toFixed(0)+'%';
+
+  const tempEl  = box.querySelector('.exo-temp');
+  if(tempEl&&temp!==null) tempEl.textContent=temp.toFixed(0)+'°C';
+  const powerEl = box.querySelector('.exo-power');
+  if(powerEl&&power!==null) powerEl.textContent=power.toFixed(0)+'W';
+
+  const engEl = box.querySelector('.node-engine-pill');
+  if(engEl&&stats.engine&&stats.engine!=='none'){
+    engEl.textContent=engineLabel(stats.engine);
+    engEl.className='node-engine-pill '+stats.engine;
+  }
+
+  // Pulse when GPU active
+  if(gpuUtil!==null&&gpuUtil>5) box.classList.add('active-inference');
+  else box.classList.remove('active-inference');
+}
+
+function renderNodeCards(){ renderClusterViz(); } // alias for existing calls
+
+function function renderNodeTable(){
   const tbody=document.getElementById('node-tbody');
   if(!peers.length){
     tbody.innerHTML=`<tr><td colspan="5" style="padding:0"><div class="empty">
@@ -1145,6 +1270,9 @@ setInterval(()=>{
 
 renderConvList();
 connect();
+window.addEventListener('resize',()=>{
+  if(peers.length) renderClusterViz();
+});
 setTimeout(()=>{
   if(!peers.length){
     fetch(API_BASE+'/api/cluster').then(r=>r.json()).then(d=>{
