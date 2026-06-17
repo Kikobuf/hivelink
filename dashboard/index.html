@@ -80,6 +80,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .cluster-empty{padding:48px 24px;text-align:center;color:var(--muted)}
 .node-card{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transition:border-color .2s}
 .node-card:hover{border-color:var(--border2)}
+.node-stat-bar-wrap{margin-top:3px}
+.node-util-track{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:2px}
+.node-util-fill{height:100%;border-radius:2px;transition:width 0.8s ease}
+.node-temp{font-size:10px;font-family:var(--mono);color:var(--amber)}
+.node-power{font-size:10px;font-family:var(--mono);color:var(--muted)}
+.node-engine-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:.04em;background:var(--surface3);border:1px solid var(--border2);color:var(--muted);font-family:var(--mono)}
+.node-engine-pill.ollama{color:#3fb950;border-color:#3fb95044;background:#3fb95012}
+.node-engine-pill.mlx{color:#a8b3c4;border-color:#a8b3c444;background:#a8b3c412}
+.node-engine-pill.vllm{color:#76b900;border-color:#76b90044;background:#76b90012}
+.node-engine-pill.llama-server{color:#d29922;border-color:#d2992244;background:#d2992212}
+.node-active-pulse{animation:pulse-border 1.5s ease-in-out infinite}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(47,129,247,0)}50%{box-shadow:0 0 0 3px rgba(47,129,247,0.25)}}
 .node-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:6px;min-width:0}
 .node-card-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0;flex:1}
 .node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 5px;flex-shrink:0;white-space:nowrap}
@@ -453,6 +465,7 @@ response = client.chat.completions.create(
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let peers=[], models=[], ws=null, selectedModel=null;
+let nodeStats={}; // node_id -> stats object
 let chatHistory=[], chatStreaming=false;
 let activeConvId=null;
 const COLORS=['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
@@ -598,6 +611,10 @@ function connect() {
         peers=msg.peers||[];
         renderNodeCards();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();
       }
+      if(msg.type==='stats_update'){
+        nodeStats[msg.node_id]=msg.stats;
+        updateNodeCardStats(msg.node_id,msg.stats);
+      }
     }catch(_){}
   };
 }
@@ -686,6 +703,61 @@ function modelMeta(id){
 const fmtMem=mb=>!mb?'0':mb>=1024?(mb/1024).toFixed(1)+' GB':mb+' MB';
 const backBadge=b=>`<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
 
+// ── Live stats update — patches node cards in place ──────────────────────────
+function engineLabel(engine){
+  const labels = {
+    'ollama':'Ollama', 'mlx':'MLX', 'vllm':'vLLM',
+    'llama-server':'llama-server', 'none':'no engine'
+  };
+  return labels[engine]||engine||'—';
+}
+
+function updateNodeCardStats(nodeId, stats){
+  if(!stats) return;
+  // Find card by node_id data attribute
+  const card = document.querySelector(`[data-node-id="${nodeId}"]`);
+  if(!card) return;
+
+  // GPU utilization bar
+  const gpuUtil = stats.gpus&&stats.gpus.length ? stats.gpus[0].util_pct : null;
+  const temp    = stats.gpus&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
+  const power   = stats.gpus&&stats.gpus.length ? stats.gpus[0].power_w  : null;
+
+  // CPU bar
+  const cpuBar = card.querySelector('.stat-cpu-fill');
+  if(cpuBar) cpuBar.style.width = stats.cpu_pct+'%';
+  const cpuVal = card.querySelector('.stat-cpu-val');
+  if(cpuVal) cpuVal.textContent = stats.cpu_pct.toFixed(0)+'%';
+
+  // GPU util bar
+  const gpuBar = card.querySelector('.stat-gpu-fill');
+  if(gpuBar && gpuUtil!==null) gpuBar.style.width = gpuUtil+'%';
+  const gpuVal = card.querySelector('.stat-gpu-val');
+  if(gpuVal && gpuUtil!==null) gpuVal.textContent = gpuUtil.toFixed(0)+'%';
+
+  // Temp
+  const tempEl = card.querySelector('.stat-temp');
+  if(tempEl && temp!==null) tempEl.textContent = temp.toFixed(0)+'°C';
+
+  // Power
+  const powerEl = card.querySelector('.stat-power');
+  if(powerEl && power!==null) powerEl.textContent = power.toFixed(0)+'W';
+
+  // Engine pill
+  const engineEl = card.querySelector('.node-engine-pill');
+  if(engineEl && stats.engine){
+    engineEl.textContent = engineLabel(stats.engine);
+    engineEl.className   = 'node-engine-pill '+stats.engine;
+  }
+
+  // Pulse if GPU active
+  if(gpuUtil!==null && gpuUtil>5){
+    card.classList.add('node-active-pulse');
+  } else {
+    card.classList.remove('node-active-pulse');
+  }
+}
+
 // ── EXO-style node cards ──────────────────────────────────────────────────────
 function renderNodeCards(){
   const wrap=document.getElementById('node-cards-wrap');
@@ -713,32 +785,57 @@ function renderNodeCards(){
     const osName={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||hw.node_os||'?';
     const selfBadge=p.is_self?`<span class="node-card-self">this node</span>`:'';
     const tflops=(hw.total_fp16_tflops||0).toFixed(1);
-    return`<div class="node-card" style="border-top:2px solid ${color}">
+    const existStats = nodeStats[p.node_id];
+    const gpuUtil = existStats&&existStats.gpus.length ? existStats.gpus[0].util_pct : null;
+    const temp    = existStats&&existStats.gpus.length ? existStats.gpus[0].temp_c   : null;
+    const power   = existStats&&existStats.gpus.length ? existStats.gpus[0].power_w  : null;
+    const eng     = existStats ? existStats.engine : null;
+    const cpuPct  = existStats ? existStats.cpu_pct : null;
+    return`<div class="node-card" style="border-top:2px solid ${color}" data-node-id="${p.node_id}">
       <div class="node-card-header">
         <div class="node-card-name">
           ${osIcon(hw.node_os)}
           <span>${osName}</span>
           ${selfBadge}
         </div>
-        ${backBadge(backend)}
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <span class="node-engine-pill ${eng||''}">${eng?engineLabel(eng):'—'}</span>
+          ${backBadge(backend)}
+        </div>
       </div>
       <div class="node-card-body">
         <div>
           <div class="node-stat-row">
-            <span class="node-stat-label">Memory</span>
+            <span class="node-stat-label">VRAM</span>
             <span class="node-stat-val" style="color:${color}">${fmtMem(mem)}</span>
           </div>
           <div class="node-mem-track">
             <div class="node-mem-fill" style="width:${memPct}%;background:${color}"></div>
           </div>
         </div>
+        ${gpuUtil!==null?`<div>
+          <div class="node-stat-row">
+            <span class="node-stat-label">GPU</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="node-stat-val stat-gpu-val">${gpuUtil.toFixed(0)}%</span>
+              ${temp!==null?`<span class="node-temp stat-temp">${temp.toFixed(0)}°C</span>`:''}
+              ${power!==null?`<span class="node-power stat-power">${power.toFixed(0)}W</span>`:''}
+            </div>
+          </div>
+          <div class="node-util-track">
+            <div class="node-util-fill stat-gpu-fill" style="width:${gpuUtil}%;background:#76b900"></div>
+          </div>
+        </div>`:''}
+        <div>
+          <div class="node-stat-row">
+            <span class="node-stat-label">CPU</span>
+            <span class="node-stat-val stat-cpu-val">${cpuPct!==null?cpuPct.toFixed(0)+'%':'—'}</span>
+          </div>
+          ${cpuPct!==null?`<div class="node-util-track"><div class="node-util-fill stat-cpu-fill" style="width:${cpuPct}%;background:${color}aa"></div></div>`:''}
+        </div>
         <div class="node-stat-row">
           <span class="node-stat-label">TFLOPS</span>
           <span class="node-stat-val">${tflops}</span>
-        </div>
-        <div class="node-stat-row">
-          <span class="node-stat-label">CPU</span>
-          <span class="node-stat-val" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${hw.cpu_name||'?'}</span>
         </div>
       </div>
       <div class="node-card-footer">

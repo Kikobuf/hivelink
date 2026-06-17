@@ -6,9 +6,10 @@ FastAPI node server:
   GET  /api/hardware  — this node's hardware
   GET  /api/models    — runnable models
   GET  /api/plan/{m}  — layer assignment plan
+  GET  /api/stats     — live CPU/GPU stats for this node
   POST /v1/chat/completions  — OpenAI-compatible inference
   GET  /v1/models     — OpenAI model list
-  WS   /ws/cluster    — live peer updates
+  WS   /ws/cluster    — live peer + stats updates
   GET  /health        — health check
 """
 
@@ -33,17 +34,20 @@ from pydantic import BaseModel
 from .discovery import DiscoveryService, PeerInfo
 from .hardware import HardwareProfile, detect as detect_hardware
 from .scheduler import MODEL_SPECS, assign_layers, can_run_model
+from .stats import collect as collect_stats, NodeStats
 
 logger = logging.getLogger(__name__)
 
-_node_id: str = str(uuid.uuid4())
+_node_id: str   = str(uuid.uuid4())
 _hardware: HardwareProfile | None = None
 _discovery: DiscoveryService | None = None
 _ws_clients: list[WebSocket] = []
+_last_stats: NodeStats | None = None
 
-API_PORT             = int(os.environ.get("HIVELINK_PORT", "47730"))
-LLAMA_CPP_SERVER_PORT= int(os.environ.get("LLAMA_CPP_PORT", "8080"))
-DASHBOARD_PATH       = Path(__file__).parent.parent / "dashboard" / "index.html"
+API_PORT              = int(os.environ.get("HIVELINK_PORT", "47730"))
+LLAMA_CPP_SERVER_PORT = int(os.environ.get("LLAMA_CPP_PORT", "8080"))
+DASHBOARD_PATH        = Path(__file__).parent.parent / "dashboard" / "index.html"
+STATS_INTERVAL        = 2.0   # seconds between live stats broadcasts
 
 
 @asynccontextmanager
@@ -60,17 +64,20 @@ async def lifespan(app: FastAPI):
         hardware       = _hardware,
         on_peer_change = _on_peer_change,
     )
-    task = asyncio.create_task(_discovery.start())
+    peer_task  = asyncio.create_task(_discovery.start())
+    stats_task = asyncio.create_task(_stats_loop())
     yield
     await _discovery.stop()
-    task.cancel()
+    peer_task.cancel()
+    stats_task.cancel()
 
 
 def _on_peer_change(peers: dict[str, PeerInfo]) -> None:
-    asyncio.create_task(_broadcast(peers))
+    asyncio.create_task(_broadcast_peers(peers))
 
 
-async def _broadcast(peers: dict[str, PeerInfo]) -> None:
+async def _broadcast_peers(peers: dict[str, PeerInfo]) -> None:
+    """Push cluster update to all WebSocket clients."""
     if not _ws_clients:
         return
     payload = json.dumps({
@@ -78,6 +85,31 @@ async def _broadcast(peers: dict[str, PeerInfo]) -> None:
         "peers": [p.to_dict() for p in peers.values()],
         "ts":    time.time(),
     })
+    await _send_to_all(payload)
+
+
+async def _stats_loop() -> None:
+    """Collect live stats every STATS_INTERVAL seconds and push to clients."""
+    global _last_stats
+    await asyncio.sleep(2)   # let server start up first
+    while True:
+        try:
+            stats = await collect_stats()
+            _last_stats = stats
+            if _ws_clients:
+                payload = json.dumps({
+                    "type":  "stats_update",
+                    "node_id": _node_id,
+                    "stats": stats.to_dict(),
+                    "ts":    time.time(),
+                })
+                await _send_to_all(payload)
+        except Exception as e:
+            logger.debug("Stats collection error: %s", e)
+        await asyncio.sleep(STATS_INTERVAL)
+
+
+async def _send_to_all(payload: str) -> None:
     dead = []
     for ws in _ws_clients:
         try:
@@ -85,10 +117,11 @@ async def _broadcast(peers: dict[str, PeerInfo]) -> None:
         except Exception:
             dead.append(ws)
     for ws in dead:
-        _ws_clients.remove(ws)
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
 
 
-app = FastAPI(title="HiveLink", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="HiveLink", version="0.2.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -104,11 +137,20 @@ async def dashboard():
 async def ws_cluster(websocket: WebSocket):
     await websocket.accept()
     _ws_clients.append(websocket)
+    # Send current cluster state immediately on connect
     if _discovery:
         await websocket.send_text(json.dumps({
             "type":  "cluster_update",
             "peers": [p.to_dict() for p in _discovery.peers.values()],
             "ts":    time.time(),
+        }))
+    # Also send latest stats if available
+    if _last_stats:
+        await websocket.send_text(json.dumps({
+            "type":    "stats_update",
+            "node_id": _node_id,
+            "stats":   _last_stats.to_dict(),
+            "ts":      time.time(),
         }))
     try:
         while True:
@@ -139,12 +181,16 @@ async def get_hardware():
     return _hardware.to_dict()
 
 
-async def _ollama_models() -> list[dict]:
-    """Fetch models from Ollama or llama-server.
-    Auto-tries port 11434 (Ollama default) and 8080 (llama-server default)
-    in addition to LLAMA_CPP_PORT, so no manual env var needed for Ollama.
-    """
-    ports_to_try = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080]))
+@app.get("/api/stats")
+async def get_stats():
+    """Live CPU/GPU stats for this node."""
+    stats = await collect_stats()
+    return stats.to_dict()
+
+
+async def _ollama_models() -> list[str]:
+    """Fetch live models from Ollama / llama-server / vLLM / MLX."""
+    ports_to_try = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080, 8000, 10240]))
     async with httpx.AsyncClient(timeout=2) as client:
         for port in ports_to_try:
             try:
@@ -162,42 +208,37 @@ async def _ollama_models() -> list[dict]:
 async def get_models():
     if not _discovery:
         raise HTTPException(503, "Discovery not running")
-    peers  = _discovery.active_peers()
+    peers = _discovery.active_peers()
 
-    # Live models from Ollama / llama-server (what's actually running)
     live_model_ids = await _ollama_models()
-
     models = []
 
-    # Add live models first — these are actually usable right now
     for mid in live_model_ids:
         models.append({
-            "model_id":  mid,
-            "params_b":  0,
-            "layers":    0,
+            "model_id":   mid,
+            "params_b":   0,
+            "layers":     0,
             "quant_bits": 4,
-            "size_mb":   0,
-            "can_run":   True,
-            "live":      True,   # actually loaded in inference engine
+            "size_mb":    0,
+            "can_run":    True,
+            "live":       True,
         })
 
-    # Add cluster-feasible models from the known spec list
     live_ids_lower = {m.lower() for m in live_model_ids}
     for model_id, (layers, params_b) in MODEL_SPECS.items():
-        # Skip if already listed as a live model
         if any(model_id in lid for lid in live_ids_lower):
             continue
         for bits in [4, 8]:
             check = can_run_model(peers, model_id, bits)
             if check["can_run"]:
                 models.append({
-                    "model_id":  model_id,
-                    "params_b":  params_b,
-                    "layers":    layers,
-                    "quant_bits":bits,
-                    "size_mb":   check["needed_mb"],
-                    "can_run":   True,
-                    "live":      False,
+                    "model_id":   model_id,
+                    "params_b":   params_b,
+                    "layers":     layers,
+                    "quant_bits": bits,
+                    "size_mb":    check["needed_mb"],
+                    "can_run":    True,
+                    "live":       False,
                 })
                 break
 
@@ -231,7 +272,7 @@ class ChatRequest(BaseModel):
 
 async def _find_inference_port() -> int:
     """Return the first port where an inference server is actually running."""
-    ports = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080]))
+    ports = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080, 8000, 10240]))
     async with httpx.AsyncClient(timeout=1) as client:
         for port in ports:
             try:
@@ -240,12 +281,12 @@ async def _find_inference_port() -> int:
                     return port
             except Exception:
                 continue
-    return LLAMA_CPP_SERVER_PORT  # fallback
+    return LLAMA_CPP_SERVER_PORT
 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatRequest):
-    port = await _find_inference_port()
+    port      = await _find_inference_port()
     llama_url = f"http://127.0.0.1:{port}/v1/chat/completions"
     payload   = {
         "model":       req.model,
@@ -271,7 +312,7 @@ async def chat_completions(req: ChatRequest):
             resp = await client.post(llama_url, json=payload)
             return resp.json()
         except httpx.ConnectError:
-            raise HTTPException(503, "llama-server not running. Start it with: llama-server --model <path/to/model.gguf>")
+            raise HTTPException(503, "Inference server not running")
 
 
 @app.get("/v1/models")
