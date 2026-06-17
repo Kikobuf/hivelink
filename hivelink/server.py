@@ -140,16 +140,21 @@ async def get_hardware():
 
 
 async def _ollama_models() -> list[dict]:
-    """Fetch models actually loaded in Ollama/llama-server."""
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            # Try OpenAI-compatible /v1/models first (Ollama + llama-server both support this)
-            resp = await client.get(f"http://127.0.0.1:{LLAMA_CPP_SERVER_PORT}/v1/models")
-            if resp.status_code == 200:
-                data = resp.json()
-                return [m["id"] for m in data.get("data", [])]
-    except Exception:
-        pass
+    """Fetch models from Ollama or llama-server.
+    Auto-tries port 11434 (Ollama default) and 8080 (llama-server default)
+    in addition to LLAMA_CPP_PORT, so no manual env var needed for Ollama.
+    """
+    ports_to_try = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080]))
+    async with httpx.AsyncClient(timeout=2) as client:
+        for port in ports_to_try:
+            try:
+                resp = await client.get(f"http://127.0.0.1:{port}/v1/models")
+                if resp.status_code == 200:
+                    ids = [m["id"] for m in resp.json().get("data", [])]
+                    if ids:
+                        return ids
+            except Exception:
+                continue
     return []
 
 
@@ -223,9 +228,24 @@ class ChatRequest(BaseModel):
     max_tokens: int = 1024
 
 
+async def _find_inference_port() -> int:
+    """Return the first port where an inference server is actually running."""
+    ports = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080]))
+    async with httpx.AsyncClient(timeout=1) as client:
+        for port in ports:
+            try:
+                r = await client.get(f"http://127.0.0.1:{port}/v1/models")
+                if r.status_code == 200 and r.json().get("data"):
+                    return port
+            except Exception:
+                continue
+    return LLAMA_CPP_SERVER_PORT  # fallback
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatRequest):
-    llama_url = f"http://127.0.0.1:{LLAMA_CPP_SERVER_PORT}/v1/chat/completions"
+    port = await _find_inference_port()
+    llama_url = f"http://127.0.0.1:{port}/v1/chat/completions"
     payload   = {
         "model":       req.model,
         "messages":    [m.model_dump() for m in req.messages],
