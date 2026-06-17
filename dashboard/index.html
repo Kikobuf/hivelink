@@ -352,6 +352,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       </div>
       <div class="chat-input-row">
         <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
+        <div class="chat-tps hidden" id="chat-tps"><i class="fa-solid fa-bolt" style="font-size:10px;color:var(--green)"></i><span class="chat-tps-val" id="chat-tps-val">0.0</span><span style="color:var(--muted2);margin-left:2px">tok/s</span></div>
         <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
       </div>
     </div>
@@ -1033,6 +1034,18 @@ function copyUrl(){
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+// Safety reset: if chatStreaming gets stuck (e.g. lost connection mid-stream), reset after 60s
+setInterval(()=>{
+  if(chatStreaming){
+    const btn=document.getElementById('chat-send');
+    if(btn&&btn.disabled) return; // still actively sending, leave alone
+    chatStreaming=false;
+    clearInterval(tpsInterval);
+    const tpsEl=document.getElementById('chat-tps');
+    if(tpsEl) tpsEl.classList.add('hidden');
+  }
+},60000);
+
 renderConvList();
 connect();
 setTimeout(()=>{
