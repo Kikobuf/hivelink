@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>HiveLink</title>
+<!-- Simple Icons for brand logos (Apple, NVIDIA, Windows, Linux, AMD) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -85,9 +87,28 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .node-table tr:last-child td { border-bottom:none; }
 .node-table tr:hover td { background:var(--surface2); }
 .node-name-cell { display:flex; align-items:center; gap:10px; }
-.node-avatar { width:32px; height:32px; border-radius:6px; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+
+/* OS/GPU icons using Font Awesome */
+.node-avatar {
+  width:34px; height:34px; border-radius:7px;
+  background:var(--surface2); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.node-avatar .fa-apple        { color:#a8b3c4; }
+.node-avatar .fa-windows      { color:#00adef; }
+.node-avatar .fa-linux        { color:#f5a623; }
+.node-avatar .fa-microchip    { color:#58a6ff; }  /* CPU fallback */
+
 .node-id-text { font-family:var(--mono); font-size:11px; color:var(--text); }
 .node-hostname { font-size:10px; color:var(--muted); margin-top:1px; }
+
+/* GPU brand icon in GPU column */
+.gpu-cell { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+.gpu-brand-icon { font-size:13px; flex-shrink:0; }
+.gpu-brand-icon.nvidia { color:var(--cuda); }
+.gpu-brand-icon.amd    { color:var(--rocm); }
+.gpu-brand-icon.apple  { color:var(--metal); }
 
 /* Badges */
 .badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.04em; font-family:var(--mono); }
@@ -124,39 +145,65 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .model-footer { display:flex; align-items:center; justify-content:space-between; }
 .model-size { font-size:10px; color:var(--muted); font-family:var(--mono); }
 .quant-pill { display:inline-block; padding:1px 6px; background:var(--surface3); border:1px solid var(--border2); border-radius:3px; font-size:10px; font-family:var(--mono); color:var(--muted); }
+.live-pill { display:inline-block; padding:1px 6px; background:#3fb95018; border:1px solid #3fb95044; border-radius:3px; font-size:10px; color:var(--green); }
 
 /* Layer plan */
 .layer-assignment { margin-bottom:12px; }
 .layer-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-.layer-node-id { font-family:var(--mono); font-size:11px; color:var(--text); }
+.layer-node-id { font-family:var(--mono); font-size:11px; color:var(--text); display:flex; align-items:center; gap:6px; }
 .layer-range { font-family:var(--mono); font-size:10px; color:var(--muted); }
 .layer-track { height:28px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; overflow:hidden; position:relative; }
 .layer-fill { height:100%; position:absolute; top:0; display:flex; align-items:center; padding:0 8px; font-size:10px; font-family:var(--mono); font-weight:600; white-space:nowrap; transition:width 0.6s cubic-bezier(.34,1.2,.64,1); }
 .layer-stats { display:flex; gap:12px; margin-top:5px; font-size:10px; color:var(--muted); align-items:center; }
 
-/* Chat page */
-.chat-wrap { display:flex; flex-direction:column; height:calc(100vh - 52px - 48px - 48px); min-height:400px; }
-.chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+/* ── Chat ─────────────────────────────────────────────────────────────────── */
+.chat-wrap { display:flex; flex-direction:column; min-height:500px; }
+.chat-toolbar { display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid var(--border); background:var(--surface2); }
+.chat-toolbar-label { font-size:11px; color:var(--muted); }
+.chat-model-select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); color:var(--text); font-size:12px; padding:4px 8px; cursor:pointer; }
+.chat-clear { padding:3px 10px; background:transparent; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; }
+.chat-clear:hover { color:var(--text); }
+.no-model-warn { background:#d2992218; border:1px solid #d2992244; border-radius:var(--r); padding:10px 14px; font-size:12px; color:var(--amber); margin:12px 16px 0; }
+.chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; min-height:360px; max-height:calc(100vh - 300px); }
 .chat-bubble { max-width:80%; padding:10px 14px; border-radius:10px; font-size:13px; line-height:1.6; }
 .chat-bubble.user { align-self:flex-end; background:var(--accent); color:#fff; border-radius:10px 10px 2px 10px; }
 .chat-bubble.assistant { align-self:flex-start; background:var(--surface2); border:1px solid var(--border); border-radius:10px 10px 10px 2px; }
-.chat-bubble.assistant.thinking { color:var(--muted); font-style:italic; }
 .chat-bubble pre { background:var(--surface3); border-radius:4px; padding:8px 10px; overflow-x:auto; margin-top:6px; font-size:11px; font-family:var(--mono); }
 .chat-bubble code { font-family:var(--mono); font-size:11px; background:var(--surface3); padding:1px 4px; border-radius:3px; }
 .chat-bubble pre code { background:none; padding:0; }
-.chat-input-row { display:flex; gap:8px; padding:12px 20px; border-top:1px solid var(--border); background:var(--surface); }
+
+/* Thinking animation — Grok-style dots */
+.thinking-wrap { display:flex; flex-direction:column; gap:8px; }
+.thinking-dots { display:flex; align-items:center; gap:5px; padding:4px 0; }
+.thinking-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); animation:tdot 1.4s infinite ease-in-out; }
+.thinking-dot:nth-child(1) { animation-delay:0s; }
+.thinking-dot:nth-child(2) { animation-delay:0.2s; }
+.thinking-dot:nth-child(3) { animation-delay:0.4s; }
+@keyframes tdot {
+  0%,80%,100% { transform:scale(0.7); opacity:0.4; }
+  40%          { transform:scale(1.15); opacity:1; }
+}
+
+/* Thinking text box — shows model's chain of thought */
+.thinking-text {
+  font-size:11px; color:var(--muted); font-family:var(--mono);
+  background:var(--surface3); border:1px solid var(--border);
+  border-radius:5px; padding:8px 10px;
+  max-height:120px; overflow-y:auto;
+  line-height:1.6; white-space:pre-wrap;
+  border-left:2px solid var(--purple);
+  display:none;
+}
+.thinking-text.has-content { display:block; }
+.thinking-label { font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--purple); margin-bottom:4px; }
+
+.chat-input-row { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface); }
 .chat-input { flex:1; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); padding:9px 12px; color:var(--text); font-size:13px; font-family:inherit; resize:none; min-height:40px; max-height:120px; outline:none; transition:border-color 0.15s; }
 .chat-input:focus { border-color:var(--accent); }
 .chat-input::placeholder { color:var(--muted); }
 .chat-send { padding:9px 16px; background:var(--accent); color:#fff; border:none; border-radius:var(--r); font-size:13px; font-weight:500; cursor:pointer; transition:opacity 0.15s; flex-shrink:0; }
 .chat-send:hover { opacity:0.85; }
 .chat-send:disabled { opacity:0.4; cursor:default; }
-.chat-model-select { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); color:var(--text); font-size:12px; padding:4px 8px; cursor:pointer; }
-.chat-toolbar { display:flex; align-items:center; gap:10px; padding:8px 20px; border-bottom:1px solid var(--border); background:var(--surface2); }
-.chat-toolbar-label { font-size:11px; color:var(--muted); }
-.chat-clear { padding:3px 10px; background:transparent; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; }
-.chat-clear:hover { color:var(--text); border-color:var(--border2); }
-.no-model-warn { background:var(--amber)18; border:1px solid var(--amber)44; border-radius:var(--r); padding:10px 14px; font-size:12px; color:var(--amber); margin:12px 20px 0; }
 
 /* API & Install */
 .code-block { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; font-family:var(--mono); font-size:11px; color:var(--text); overflow-x:auto; white-space:pre; }
@@ -171,7 +218,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .api-desc { color:var(--muted); font-size:10px; }
 .copy-btn { padding:3px 10px; background:var(--surface3); border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:11px; cursor:pointer; transition:all 0.15s; }
 .copy-btn:hover { color:var(--text); }
-.copy-btn.copied { color:var(--green); border-color:var(--green)44; }
+.copy-btn.copied { color:var(--green); border-color:#3fb95044; }
 .install-step { border-left:2px solid var(--border2); padding:0 0 22px 20px; position:relative; margin-left:16px; }
 .install-step:last-child { padding-bottom:0; border-left-color:transparent; }
 .step-num { position:absolute; left:-12px; top:0; width:22px; height:22px; border-radius:50%; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--muted); }
@@ -227,7 +274,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
         <table class="node-table">
           <thead><tr><th>Node</th><th>Backend</th><th style="width:200px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
           <tbody id="node-tbody">
-            <tr><td colspan="5"><div class="empty"><div class="empty-icon">⬡</div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div></div></td></tr>
+            <tr><td colspan="5"><div class="empty"><div class="empty-icon"><i class="fa-solid fa-circle-nodes"></i></div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine — they appear here within seconds</div></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -250,15 +297,15 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
     <!-- Chat -->
     <div class="page" id="page-chat">
       <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Talk to your cluster — responses stream directly from your local models</div></div>
-      <div class="card" style="display:flex;flex-direction:column;min-height:500px">
+      <div class="card chat-wrap">
         <div class="chat-toolbar">
           <span class="chat-toolbar-label">Model</span>
           <select class="chat-model-select" id="chat-model-select"><option value="">— select model —</option></select>
           <button class="chat-clear" onclick="clearChat()">Clear</button>
         </div>
-        <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above, or go to Models to see what your cluster can run.</div>
+        <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above.</div>
         <div class="chat-messages" id="chat-messages">
-          <div style="text-align:center;color:var(--muted);font-size:12px;margin:auto">Select a model above and start chatting</div>
+          <div style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>
         </div>
         <div class="chat-input-row">
           <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
@@ -284,59 +331,52 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
             <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Chat inference — streams SSE</span></div>
             <div class="api-row"><span class="api-method">GET</span><span class="api-path">/v1/models</span><span class="api-desc">List available models</span></div>
             <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/cluster</span><span class="api-desc">Cluster status + all peer info</span></div>
-            <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/hardware</span><span class="api-desc">This node's hardware profile</span></div>
             <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer distribution plan</span></div>
-            <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live cluster updates (used by this dashboard)</span></div>
+            <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live cluster updates</span></div>
           </div>
         </div>
       </div>
       <div class="card">
-        <div class="card-header">Example — Python (openai SDK)</div>
-        <div style="padding:14px 16px">
-          <div class="code-block" id="api-code-example"></div>
-        </div>
+        <div class="card-header">Example — Python</div>
+        <div style="padding:14px 16px"><div class="code-block" id="api-code-example"></div></div>
       </div>
     </div>
 
     <!-- Install -->
     <div class="page" id="page-install">
-      <div class="page-header"><div class="page-title">Setup guide</div><div class="page-sub">Install HiveLink on every machine you want in the cluster — same steps on all platforms</div></div>
+      <div class="page-header"><div class="page-title">Setup guide</div><div class="page-sub">Install HiveLink on every machine you want in the cluster</div></div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">Installation</div>
         <div style="padding:20px 24px">
-          <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node. Python 3.12 recommended.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
-          <div class="install-step"><div class="step-num">2</div><div class="step-title">Install HiveLink</div><div class="step-desc">Same command on Windows, Linux, and macOS.</div>
+          <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
+          <div class="install-step"><div class="step-num">2</div><div class="step-title">Install HiveLink</div><div class="step-desc">Same command on all platforms.</div>
 <div class="code-block"><span class="cmd">pip install hivelink</span>
+<span class="comment"># NVIDIA GPU</span>  <span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
+<span class="comment"># AMD GPU</span>    <span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
+          <div class="install-step"><div class="step-num">3</div><div class="step-title">Start on every machine</div><div class="step-desc">Nodes discover each other automatically via UDP broadcast. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
+          <div class="install-step"><div class="step-num">4</div><div class="step-title">Start Ollama or llama-server with a model</div><div class="step-desc">HiveLink routes chat requests to your local inference engine.</div>
+<div class="code-block"><span class="comment"># Option A — Ollama (easiest)</span>
+<span class="cmd">ollama run llama3.2</span>
 
-<span class="comment"># NVIDIA GPU support</span>
-<span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
+<span class="comment"># Option B — llama-server directly</span>
+<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080
 
-<span class="comment"># AMD GPU support</span>
-<span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
-          <div class="install-step"><div class="step-num">3</div><div class="step-title">Install llama.cpp</div><div class="step-desc">Downloads the prebuilt llama-server binary for your platform.</div><div class="code-block"><span class="cmd">hivelink install-llama</span></div></div>
-          <div class="install-step"><div class="step-num">4</div><div class="step-title">Start on every machine</div><div class="step-desc">Run this on each device — they discover each other automatically within a few seconds. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
-          <div class="install-step"><div class="step-num">5</div><div class="step-title">Download a model and run it</div><div class="step-desc">Models from Ollama, LM Studio, or Hugging Face all work — they're all GGUF format under the hood.</div>
-<div class="code-block"><span class="comment"># Download any GGUF model from Hugging Face</span>
-<span class="cmd">huggingface-cli download</span> bartowski/Llama-3.1-8B-Instruct-GGUF <span class="flag">\</span>
-  <span class="flag">--include</span> <span class="flag">"Llama-3.1-8B-Instruct-Q4_K_M.gguf"</span>
-
-<span class="comment"># Or use a model Ollama already downloaded</span>
-<span class="comment"># Ollama stores GGUF files at: ~/.ollama/models/blobs/</span>
-
-<span class="comment"># Start llama-server with your model</span>
-<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080</div></div>
+<span class="comment"># Tell HiveLink which port your inference engine is on</span>
+<span class="comment"># Ollama: port 11434 | llama-server default: port 8080</span>
+<span class="cmd">set LLAMA_CPP_PORT=11434</span>  <span class="comment"># Windows</span>
+<span class="cmd">export LLAMA_CPP_PORT=11434</span>  <span class="comment"># Mac/Linux</span></div></div>
         </div>
       </div>
       <div class="card">
-        <div class="card-header">Compatible model sources</div>
+        <div class="card-header">Compatible hardware</div>
         <div style="padding:14px 16px">
           <table class="node-table">
-            <thead><tr><th>Source</th><th>Format</th><th>Works?</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Platform</th><th>OS</th><th>Backend</th></tr></thead>
             <tbody>
-              <tr><td>Hugging Face Hub</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">Best selection, use bartowski/ or lmstudio-community/</td></tr>
-              <tr><td>Ollama</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">~/.ollama/models/blobs/ — point llama-server there</td></tr>
-              <tr><td>LM Studio</td><td style="font-family:var(--mono);font-size:11px">.gguf</td><td style="color:var(--green)">✓ Native</td><td style="color:var(--muted);font-size:11px">~/.cache/lm-studio/models/</td></tr>
-              <tr><td>OpenAI API</td><td>API</td><td style="color:var(--muted)">— N/A</td><td style="color:var(--muted);font-size:11px">Cloud only, cannot distribute</td></tr>
+              <tr><td><i class="fa-brands fa-apple" style="color:var(--metal);margin-right:6px"></i>Apple Silicon Mac</td><td>macOS 12+</td><td><span class="badge badge-metal">METAL</span></td></tr>
+              <tr><td><i class="fa-brands fa-windows" style="color:#00adef;margin-right:6px"></i>Windows PC (NVIDIA)</td><td>Windows 10/11</td><td><span class="badge badge-cuda">CUDA</span></td></tr>
+              <tr><td><i class="fa-brands fa-linux" style="color:#f5a623;margin-right:6px"></i>Linux (NVIDIA / AMD)</td><td>Ubuntu 22+</td><td><span class="badge badge-cuda">CUDA</span> <span class="badge badge-rocm">ROCM</span></td></tr>
+              <tr><td><i class="fa-solid fa-microchip" style="color:var(--cpu);margin-right:6px"></i>CPU-only node</td><td>Any</td><td><span class="badge badge-cpu">CPU</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -347,23 +387,16 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 </div>
 
 <script>
-// ── Config ───────────────────────────────────────────────────────────────────
 const API_BASE = `${location.protocol}//${location.hostname}:47730`;
 const WS_BASE  = `ws://${location.hostname}:47730`;
 
-// Set dynamic API URL in UI
 document.getElementById('api-base-url').textContent = API_BASE;
 document.getElementById('api-code-example').innerHTML =
 `<span class="comment"># pip install openai</span>
 <span class="cmd">from</span> openai <span class="cmd">import</span> OpenAI
-
-client = OpenAI(
-    base_url=<span class="flag">"${API_BASE}/v1"</span>,
-    api_key=<span class="flag">"hivelink"</span>,  <span class="comment"># any value</span>
-)
-
+client = OpenAI(base_url=<span class="flag">"${API_BASE}/v1"</span>, api_key=<span class="flag">"hivelink"</span>)
 response = client.chat.completions.create(
-    model=<span class="flag">"llama3-8b"</span>,
+    model=<span class="flag">"llama3.2:latest"</span>,
     messages=[{<span class="flag">"role"</span>: <span class="flag">"user"</span>, <span class="flag">"content"</span>: <span class="flag">"Hello!"</span>}],
     stream=<span class="cmd">True</span>,
 )
@@ -400,14 +433,38 @@ function connect() {
     } catch(_) {}
   };
 }
-
 function setConn(cls, label) {
   document.getElementById('conn-dot').className = 'dot ' + cls;
   document.getElementById('conn-label').textContent = label;
 }
 
+// ── OS / GPU icons ────────────────────────────────────────────────────────────
+function osIcon(os) {
+  const icons = {
+    darwin:  '<i class="fa-brands fa-apple"></i>',
+    windows: '<i class="fa-brands fa-windows"></i>',
+    linux:   '<i class="fa-brands fa-linux"></i>',
+  };
+  return icons[os] || '<i class="fa-solid fa-microchip"></i>';
+}
+
+function gpuBrandIcon(gpuName) {
+  if (!gpuName || gpuName === '—') return '';
+  const n = gpuName.toLowerCase();
+  if (n.includes('nvidia') || n.includes('geforce') || n.includes('rtx') || n.includes('gtx') || n.includes('quadro')) {
+    // NVIDIA "eye" logo using SVG inline — Font Awesome doesn't have NVIDIA brand
+    return `<svg class="gpu-brand-icon nvidia" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color:var(--cuda);flex-shrink:0"><path d="M5.275 7.1v1.362C3.685 9.26 2.4 11.048 2.4 13.04c0 3.154 2.617 5.508 6.093 5.508 1.36 0 2.658-.38 3.73-.997v1.437c-1.09.498-2.313.793-3.73.793C4.002 19.78.74 16.88.74 13.04c0-2.66 1.547-4.97 3.8-6.145L5.275 7.1zm1.265 5.636v-1.36c.396-.164.828-.27 1.293-.27 1.84 0 2.974 1.24 2.974 3.054 0 .516-.107 1.01-.303 1.47l-1.09-1.207c.044-.17.068-.348.068-.533 0-.86-.54-1.478-1.39-1.478-.538 0-.996.14-1.322.43l-.23-.106zM7.833 4.22v1.44c-.464.05-.916.147-1.293.294V4.646A8.16 8.16 0 017.833 4.22zm0 13.79v1.44a7.97 7.97 0 01-1.293-.294v-1.314c.38.148.83.12 1.293.168zM9.48 4.1C13.845 4.374 17.01 7.7 17.01 12c0 4.3-3.165 7.627-7.53 7.9v-1.44C13.01 18.196 15.59 15.44 15.59 12c0-3.44-2.58-6.195-6.11-6.46V4.1zm6.667 3.074l1.39 1.537A8.34 8.34 0 0118.6 12c0 1.235-.27 2.41-.756 3.46l-1.382-1.53A6.72 6.72 0 0016.93 12c0-.992-.2-1.937-.555-2.788l-.23-.038z"/></svg>`;
+  }
+  if (n.includes('amd') || n.includes('radeon') || n.includes('rx ')) {
+    return `<span class="gpu-brand-icon amd" style="font-size:11px;font-weight:700;color:var(--rocm)">AMD</span>`;
+  }
+  if (n.includes('apple') || n.includes('m1') || n.includes('m2') || n.includes('m3') || n.includes('m4')) {
+    return `<i class="fa-brands fa-apple gpu-brand-icon apple"></i>`;
+  }
+  return '';
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const osEmoji  = os  => ({darwin:'🍎',linux:'🐧',windows:'🪟'}[os] || '💻');
 const fmtMem   = mb  => !mb ? '0' : mb >= 1024 ? (mb/1024).toFixed(1)+' GB' : mb+' MB';
 const backBadge = b  => `<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
 const COLORS = ['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
@@ -416,7 +473,11 @@ const COLORS = ['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc
 function renderCluster() {
   const tbody = document.getElementById('node-tbody');
   if (!peers.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">⬡</div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine on your LAN</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">
+      <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="font-size:28px;color:var(--muted2)"></i></div>
+      <div class="empty-title">No nodes yet</div>
+      <div class="empty-sub">Run <code>hivelink start</code> on each machine on your LAN</div>
+    </div></td></tr>`;
     return;
   }
   const sorted = [...peers].sort((a,b) => {
@@ -426,19 +487,20 @@ function renderCluster() {
   });
   const totalMem = sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
   tbody.innerHTML = sorted.map(p => {
-    const hw = p.hardware||{};
-    const mem = hw.total_vram_mb||hw.ram_mb||0;
-    const pct = totalMem>0 ? Math.round(mem/totalMem*100) : 0;
+    const hw      = p.hardware||{};
+    const mem     = hw.total_vram_mb||hw.ram_mb||0;
+    const pct     = totalMem>0 ? Math.round(mem/totalMem*100) : 0;
     const backend = hw.primary_backend||'cpu';
-    const gpus = (hw.gpus||[]).map(g=>g.name).join(', ')||'—';
-    const nid = (p.node_id||'').slice(0,12)+'…';
-    const self = p.is_self ? '<span class="badge badge-self" style="margin-left:5px">this node</span>' : '';
+    const gpus    = (hw.gpus||[]).map(g=>g.name).join(', ')||'—';
+    const firstGpu= (hw.gpus||[])[0]?.name || '';
+    const nid     = (p.node_id||'').slice(0,12)+'…';
+    const selfTag = p.is_self ? '<span class="badge badge-self" style="margin-left:5px">this node</span>' : '';
     return `<tr>
       <td><div class="node-name-cell">
-        <div class="node-avatar">${osEmoji(hw.node_os)}</div>
+        <div class="node-avatar">${osIcon(hw.node_os)}</div>
         <div>
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
-            <span class="node-id-text">${nid}</span>${self}
+            <span class="node-id-text">${nid}</span>${selfTag}
           </div>
           <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div>
         </div>
@@ -446,7 +508,7 @@ function renderCluster() {
       <td>${backBadge(backend)}</td>
       <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
       <td><span class="tflops-text">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
-      <td style="color:var(--muted);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${gpus}</td>
+      <td><div class="gpu-cell">${gpuBrandIcon(firstGpu)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">${gpus}</span></div></td>
     </tr>`;
   }).join('');
 }
@@ -463,7 +525,6 @@ function updateSidebar() {
   document.getElementById('ss-tflops').textContent  = totalTflops ? totalTflops.toFixed(1) : '—';
   document.getElementById('ss-maxmodel').textContent= maxB>=1 ? maxB+'B params' : '—';
 }
-
 function updateHeaderStats() {
   const totalMem    = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
   const totalTflops = peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
@@ -476,32 +537,33 @@ function updateHeaderStats() {
 async function fetchModels() {
   try {
     const res = await fetch(API_BASE+'/api/models');
-    const data = await res.json();
-    models = data.models||[];
-    renderModels();
-    updateChatModelSelect();
+    models = (await res.json()).models||[];
+    renderModels(); updateChatModelSelect();
   } catch(_) {}
 }
 
 function renderModels() {
   const grid = document.getElementById('models-grid');
   if (!models.length) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models available</div><div class="empty-sub">Connect nodes with enough combined memory</div></div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">◈</div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>`;
     return;
   }
   const totalMem = peers.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
   grid.innerHTML = models.map((m,i) => {
-    const sz = m.size_mb>=1024 ? (m.size_mb/1024).toFixed(1)+' GB' : m.size_mb+' MB';
-    const pct = totalMem>0 ? Math.min(100,Math.round(m.size_mb/totalMem*100)) : 50;
-    const color = COLORS[i%COLORS.length];
-    const sel = selectedModel===m.model_id ? ' selected' : '';
-    return `<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits})">
+    const sz   = m.size_mb && m.size_mb>=1024 ? (m.size_mb/1024).toFixed(1)+' GB' : m.size_mb ? m.size_mb+' MB' : '';
+    const pct  = totalMem>0 && m.size_mb ? Math.min(100,Math.round(m.size_mb/totalMem*100)) : 30;
+    const color= COLORS[i%COLORS.length];
+    const sel  = selectedModel===m.model_id ? ' selected' : '';
+    const pill = m.live
+      ? `<span class="live-pill">● live</span>`
+      : `<span class="quant-pill">Q${m.quant_bits}</span>`;
+    return `<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits||4})">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
-        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b}B parameters</div></div>
-        <span class="quant-pill">Q${m.quant_bits}</span>
+        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b ? m.params_b+'B parameters' : 'loaded in inference engine'}</div></div>
+        ${pill}
       </div>
       <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers} layers</span></div>
+      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers ? m.layers+' layers' : ''}</span></div>
     </div>`;
   }).join('');
 }
@@ -528,7 +590,7 @@ function renderPlan(plan) {
     const peer  = peers.find(p=>p.node_id===a.node_id);
     return `<div class="layer-assignment">
       <div class="layer-header">
-        <span class="layer-node-id">${osEmoji(peer?.hardware?.node_os)} ${a.node_id.slice(0,10)}…</span>
+        <span class="layer-node-id">${osIcon(peer?.hardware?.node_os)} ${a.node_id.slice(0,10)}…</span>
         <span class="layer-range">layers ${a.layer_start}–${a.layer_end} · ${a.layer_count} layers</span>
       </div>
       <div class="layer-track">
@@ -547,41 +609,37 @@ function updateChatModelSelect() {
   const sel = document.getElementById('chat-model-select');
   const cur = sel.value;
   sel.innerHTML = '<option value="">— select model —</option>' +
-    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id} (Q${m.quant_bits})</option>`).join('');
+    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${m.live ? ' ● live' : ' (Q'+m.quant_bits+')'}</option>`).join('');
 }
 
 function clearChat() {
   chatHistory = [];
   document.getElementById('chat-messages').innerHTML =
-    '<div style="text-align:center;color:var(--muted);font-size:12px;margin:auto">Select a model above and start chatting</div>';
+    '<div style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>';
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function formatMessage(text) {
-  // Code blocks
+  // Extract and hide <think> blocks — show them in the thinking box instead
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
   text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code)=>`<pre><code>${escapeHtml(code.trim())}</code></pre>`);
-  // Inline code
   text = text.replace(/`([^`]+)`/g, (_,c)=>`<code>${escapeHtml(c)}</code>`);
-  // Bold
   text = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  // Newlines
   text = text.replace(/\n/g,'<br>');
   return text;
 }
 
-function appendBubble(role, content, id) {
+function appendBubble(role, id) {
   const msgs = document.getElementById('chat-messages');
-  // Remove placeholder
   const placeholder = msgs.querySelector('[data-placeholder]');
   if (placeholder) placeholder.remove();
 
   const div = document.createElement('div');
   div.className = `chat-bubble ${role}`;
   if (id) div.id = id;
-  div.innerHTML = role === 'user' ? escapeHtml(content) : formatMessage(content);
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
@@ -589,50 +647,66 @@ function appendBubble(role, content, id) {
 
 async function sendMessage() {
   if (chatStreaming) return;
-  const input = document.getElementById('chat-input');
+  const input    = document.getElementById('chat-input');
   const modelSel = document.getElementById('chat-model-select');
-  const text = input.value.trim();
-  const model = modelSel.value;
+  const text     = input.value.trim();
+  const model    = modelSel.value;
 
-  if (!model) {
-    document.getElementById('no-model-warn').style.display = 'block';
-    return;
-  }
-  document.getElementById('no-model-warn').style.display = 'none';
+  if (!model) { document.getElementById('no-model-warn').style.display='block'; return; }
+  document.getElementById('no-model-warn').style.display='none';
   if (!text) return;
 
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   chatHistory.push({role:'user', content:text});
-  appendBubble('user', text);
 
-  const replyId = 'reply-' + Date.now();
-  const replyDiv = appendBubble('assistant', '…', replyId);
-  replyDiv.classList.add('thinking');
+  // User bubble
+  const userDiv = appendBubble('user', null);
+  userDiv.textContent = text;
+
+  // Assistant bubble with Grok-style thinking UI
+  const replyId  = 'reply-' + Date.now();
+  const replyDiv = appendBubble('assistant', replyId);
+
+  replyDiv.innerHTML = `
+    <div class="thinking-wrap">
+      <div class="thinking-dots">
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+      </div>
+      <div id="${replyId}-think-box" class="thinking-text">
+        <div class="thinking-label">Thinking</div>
+        <div id="${replyId}-think-content"></div>
+      </div>
+    </div>
+  `;
 
   chatStreaming = true;
   document.getElementById('chat-send').disabled = true;
 
-  let fullText = '';
+  let fullText    = '';
+  let thinkText   = '';
+  let inThink     = false;
+  let responseStarted = false;
+
   try {
     const res = await fetch(`${API_BASE}/v1/chat/completions`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({model, messages: chatHistory, stream:true, max_tokens:1024}),
+      body: JSON.stringify({model, messages:chatHistory, stream:true, max_tokens:2048}),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(()=>({detail:'Unknown error'}));
-      replyDiv.classList.remove('thinking');
       replyDiv.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
       chatStreaming = false;
       document.getElementById('chat-send').disabled = false;
       return;
     }
 
-    const reader = res.body.getReader();
+    const reader  = res.body.getReader();
     const decoder = new TextDecoder();
-    replyDiv.classList.remove('thinking');
+    const msgs    = document.getElementById('chat-messages');
 
     while (true) {
       const {done, value} = await reader.read();
@@ -644,38 +718,104 @@ async function sendMessage() {
         if (chunk === '[DONE]') break;
         try {
           const parsed = JSON.parse(chunk);
-          const delta = parsed.choices?.[0]?.delta?.content;
-          if (delta) {
-            fullText += delta;
-            replyDiv.innerHTML = formatMessage(fullText);
-            document.getElementById('chat-messages').scrollTop = 9999;
+          const delta  = parsed.choices?.[0]?.delta?.content || '';
+          if (!delta) continue;
+
+          fullText += delta;
+
+          // Detect <think>...</think> blocks for chain-of-thought display
+          let display = fullText;
+
+          // Extract think content
+          const thinkMatch = fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
+          if (thinkMatch) {
+            thinkText = thinkMatch[1];
+            const thinkBox     = document.getElementById(`${replyId}-think-box`);
+            const thinkContent = document.getElementById(`${replyId}-think-content`);
+            if (thinkBox && thinkContent) {
+              thinkBox.classList.add('has-content');
+              thinkContent.textContent = thinkText;
+              thinkBox.scrollTop = thinkBox.scrollHeight;
+            }
           }
+
+          // Remove think block from main display
+          display = fullText
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/<think>[\s\S]*/i, '') // still inside think block
+            .trim();
+
+          if (display) {
+            if (!responseStarted) {
+              // Replace dots with actual response
+              responseStarted = true;
+              replyDiv.innerHTML = formatMessage(display);
+              if (thinkText) {
+                // Re-append the thinking box above the response
+                const thinkEl = document.createElement('div');
+                thinkEl.innerHTML = `
+                  <div class="thinking-text has-content" style="margin-bottom:10px">
+                    <div class="thinking-label">Thought process</div>
+                    <div>${escapeHtml(thinkText)}</div>
+                  </div>`;
+                replyDiv.insertBefore(thinkEl.firstElementChild, replyDiv.firstChild);
+              }
+            } else {
+              // Update existing response — preserve think box if present
+              const existingThink = replyDiv.querySelector('.thinking-text');
+              replyDiv.innerHTML = formatMessage(display);
+              if (existingThink) replyDiv.insertBefore(existingThink, replyDiv.firstChild);
+            }
+          } else if (!responseStarted) {
+            // Still in think block — keep dots animated, update think box
+            const thinkContent = document.getElementById(`${replyId}-think-content`);
+            if (thinkContent) thinkContent.textContent = thinkText;
+          }
+
+          msgs.scrollTop = msgs.scrollHeight;
         } catch(_) {}
       }
     }
 
-    chatHistory.push({role:'assistant', content:fullText});
+    // Final render — clean up
+    const finalDisplay = fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
+    if (finalDisplay) {
+      const existingThink = replyDiv.querySelector('.thinking-text');
+      replyDiv.innerHTML = formatMessage(finalDisplay);
+      if (thinkText && existingThink) {
+        existingThink.querySelector('div:last-child').textContent = thinkText;
+        replyDiv.insertBefore(existingThink, replyDiv.firstChild);
+      } else if (thinkText) {
+        const thinkEl = document.createElement('div');
+        thinkEl.className = 'thinking-text has-content';
+        thinkEl.style.marginBottom = '10px';
+        thinkEl.innerHTML = `<div class="thinking-label">Thought process</div><div>${escapeHtml(thinkText)}</div>`;
+        replyDiv.insertBefore(thinkEl, replyDiv.firstChild);
+      }
+    } else if (!finalDisplay && !thinkText) {
+      replyDiv.innerHTML = '<span style="color:var(--muted);font-style:italic">No response</span>';
+    }
+
+    chatHistory.push({role:'assistant', content: fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim()});
+
   } catch(e) {
-    replyDiv.classList.remove('thinking');
-    replyDiv.innerHTML = `<span style="color:var(--red)">Connection error — is llama-server running?</span>`;
+    replyDiv.innerHTML = `<span style="color:var(--red)">Connection error — is llama-server / Ollama running?</span>`;
   }
 
   chatStreaming = false;
   document.getElementById('chat-send').disabled = false;
 }
 
-// Enter to send (Shift+Enter for newline)
+// Enter to send
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
-
-// Auto-resize textarea
 document.getElementById('chat-input').addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
-// ── Copy URL ─────────────────────────────────────────────────────────────────
+// Copy URL
 function copyUrl() {
   navigator.clipboard.writeText(API_BASE).then(() => {
     const btn = document.getElementById('copy-url-btn');
@@ -684,7 +824,7 @@ function copyUrl() {
   });
 }
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
+// Boot
 connect();
 setTimeout(() => {
   if (!peers.length) {

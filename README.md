@@ -132,6 +132,90 @@ Any GGUF model from Hugging Face works — the known models list just enables me
 
 ---
 
+
+## Connecting machines — Ethernet & direct links
+
+WiFi works for HiveLink, but a wired connection gives lower latency and higher bandwidth for passing activation tensors between layers.
+
+### Option 1 — Both plugged into the same router (recommended)
+
+The simplest setup. Plug both machines into your router with Ethernet. UDP discovery works exactly the same as WiFi — no extra config needed.
+
+```
+[Windows PC] ──Ethernet──┐
+                          ├── [Router/Switch]
+[Mac mini]   ──Ethernet──┘
+```
+
+Both machines get LAN IPs (e.g. `192.168.1.x`) and discover each other automatically.
+
+---
+
+### Option 2 — Direct Ethernet cable, no router
+
+Connect both machines with a single Ethernet cable for the lowest latency. Modern network cards support Auto-MDIX so a regular patch cable works — no crossover needed.
+
+You need static IPs since there's no DHCP router:
+
+**Windows:** Settings → Network & Internet → Ethernet → Edit IP assignment → Manual
+- IPv4: `192.168.100.1` · Subnet: `255.255.255.0` · Gateway: leave blank
+
+**Mac:** System Settings → Network → Ethernet → Details → TCP/IP → Configure IPv4: Manually
+- IP: `192.168.100.2` · Subnet: `255.255.255.0` · Router: leave blank
+
+Start HiveLink on both — they discover each other over the direct link.
+
+> **Tip:** Direct Ethernet delivers ~940 Mbps vs ~300 Mbps typical WiFi. For large models this cuts inter-node latency by 3–4×.
+
+---
+
+### Option 3 — Thunderbolt / USB4 bridge (fastest)
+
+If both machines have Thunderbolt ports, a single Thunderbolt cable creates a 10 Gbps network bridge — 10× faster than Gigabit Ethernet.
+
+1. Connect with a Thunderbolt cable
+2. macOS auto-creates a Thunderbolt Bridge adapter
+3. Windows: Device Manager → Network Adapters → Thunderbolt Networking
+4. Assign static IPs same as Option 2 above
+
+Ideal for a Mac mini + Windows PC sitting side by side — activation tensors transfer almost instantly.
+
+---
+
+### Option 4 — Cross-location via Tailscale
+
+If your machines are on different networks, [Tailscale](https://tailscale.com) creates a free virtual LAN between them.
+
+```bash
+# Install on both machines, then:
+tailscale up
+# Each machine gets a 100.x.x.x IP — HiveLink discovery works across these
+```
+
+> Note: Tailscale routes over the internet so bandwidth is limited by your upload speed. Good for testing, not high-throughput inference.
+
+---
+
+### Verify your connection speed
+
+```bash
+# Install iperf3: Windows: winget install iperf3 | Mac: brew install iperf3
+
+# On the receiving machine:
+iperf3 -s
+
+# On the sending machine:
+iperf3 -c <IP of receiving machine>
+```
+
+| Connection type      | Typical bandwidth |
+|----------------------|-------------------|
+| WiFi (5 GHz)         | ~300 Mbps         |
+| Gigabit Ethernet     | ~940 Mbps         |
+| Thunderbolt bridge   | ~9,000 Mbps       |
+
+---
+
 ## Architecture
 
 ```
