@@ -907,8 +907,10 @@ async function sendMessage(){
     <div id="${replyId}-tb" class="thinking-text"><div class="thinking-label">Thinking</div><div id="${replyId}-tc"></div></div></div>`;
   msgs.appendChild(replyDiv);msgs.scrollTop=msgs.scrollHeight;
 
+  let fullText='',thinkText='',responseStarted=false;
+  let tokenCount=0,streamStart=0,tpsInterval=null;
   chatStreaming=true;document.getElementById('chat-send').disabled=true;
-  tokenCount=0;streamStart=Date.now();
+  streamStart=Date.now();
   const tpsEl=document.getElementById('chat-tps');
   const tpsVal=document.getElementById('chat-tps-val');
   tpsEl.classList.remove('hidden');tpsVal.textContent='…';
@@ -916,8 +918,6 @@ async function sendMessage(){
     const secs=(Date.now()-streamStart)/1000;
     if(secs>0.3&&tokenCount>0) tpsVal.textContent=(tokenCount/secs).toFixed(1);
   },300);
-  let fullText='',thinkText='',responseStarted=false;
-  let tokenCount=0,streamStart=0,tpsInterval=null;
 
   // Build messages array including optional system prompt
   const systemMsg=cfg.system.trim()?[{role:'system',content:cfg.system}]:[];
