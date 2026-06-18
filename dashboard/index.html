@@ -682,7 +682,7 @@ function renderClusterViz(){
       </div>
       <div class="exo-footer">
         <span class="exo-mem">${fmtMem(mem)}</span>
-        ${eng&&eng!=='none'?`<span class="node-engine-pill ${eng}">${engineLabel(eng)}</span>`:'<span class="exo-mem">${firstGpu||hw.cpu_name||''}</span>'}
+        ${eng&&eng!=='none'?'<span class="node-engine-pill '+eng+'">'+engineLabel(eng)+'</span>':'<span class="exo-mem">'+(firstGpu||hw.cpu_name||'')+'</span>'}
       </div>`;
     wrap.appendChild(box);
     centers.push({x:cx,y:cy,color});
