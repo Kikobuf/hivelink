@@ -88,22 +88,47 @@ async def _broadcast_peers(peers: dict[str, PeerInfo]) -> None:
     await _send_to_all(payload)
 
 
+async def _fetch_peer_stats(peer: "PeerInfo") -> None:
+    """Fetch stats from a remote peer and relay them to all connected dashboard clients."""
+    try:
+        async with httpx.AsyncClient(timeout=2) as client:
+            resp = await client.get(f"http://{peer.ip}:{peer.api_port}/api/stats")
+            if resp.status_code == 200:
+                payload = json.dumps({
+                    "type":    "stats_update",
+                    "node_id": peer.node_id,
+                    "stats":   resp.json(),
+                    "ts":      time.time(),
+                })
+                await _send_to_all(payload)
+    except Exception as e:
+        logger.debug("Peer stats fetch error for %s: %s", peer.node_id[:8], e)
+
+
 async def _stats_loop() -> None:
-    """Collect live stats every STATS_INTERVAL seconds and push to clients."""
+    """Collect this node's stats + relay peer stats every STATS_INTERVAL seconds."""
     global _last_stats
     await asyncio.sleep(2)   # let server start up first
     while True:
         try:
+            # 1. Collect and broadcast this node's own stats
             stats = await collect_stats()
             _last_stats = stats
             if _ws_clients:
                 payload = json.dumps({
-                    "type":  "stats_update",
+                    "type":    "stats_update",
                     "node_id": _node_id,
-                    "stats": stats.to_dict(),
-                    "ts":    time.time(),
+                    "stats":   stats.to_dict(),
+                    "ts":      time.time(),
                 })
                 await _send_to_all(payload)
+
+            # 2. Fetch and relay stats from all other peers
+            if _discovery and _ws_clients:
+                for peer in _discovery.active_peers():
+                    if peer.node_id != _node_id:
+                        asyncio.create_task(_fetch_peer_stats(peer))
+
         except Exception as e:
             logger.debug("Stats collection error: %s", e)
         await asyncio.sleep(STATS_INTERVAL)
