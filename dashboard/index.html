@@ -512,6 +512,15 @@ function connect(){
         peers=msg.peers||[];
         renderClusterViz();renderNodeTable();renderHardware();
         updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();
+        // Eagerly fetch stats for non-self peers via our coordinator's relay
+        peers.filter(p=>!p.is_self).forEach(p=>{
+          const ip=p.hostname||p.hardware?.hostname;
+          const port=p.api_port||47730;
+          if(ip) fetch(`http://${ip}:${port}/api/stats`)
+            .then(r=>r.json())
+            .then(s=>{nodeStats[p.node_id]=s;updateExoNodeStats(p.node_id,s);renderMiniCluster();})
+            .catch(()=>{});
+        });
       }
       if(msg.type==='stats_update'){
         nodeStats[msg.node_id]=msg.stats;
