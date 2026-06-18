@@ -155,6 +155,20 @@
 
 ---
 
+## 🔨 v0.12 — Image/video generation routing
+
+> Goal: route image and video generation requests to whichever cluster node has a generation backend (ComfyUI, Automatic1111, Diffusers) loaded. **Not** distributed splitting like LLM inference — diffusion/DiT model architectures don't have the same clean sequential layer boundary transformers do, so the value here is node *routing*, not layer-splitting a single generation across machines.
+
+- [ ] New `/v1/images/generations` endpoint (OpenAI-spec compatible) — HiveLink routes the request to the best-fit node, not split across nodes
+- [ ] Generation backend detection — extend the existing engine-detection pattern (`stats.py`) to recognize ComfyUI / Automatic1111 / Diffusers servers running on a node, similar to how Ollama/MLX/vLLM are detected today
+- [ ] Per-node VRAM feasibility check for image/video — different math from `scheduler.py`'s LLM model fit, since diffusion VRAM use spikes during denoising steps rather than staying steady; video models (CogVideoX, Mochi, etc.) multiply that further by frame count
+- [ ] New "Media" tab in dashboard — shows generated images/video, which node produced them, generation time
+- [ ] Node selection picks single best-fit node for the job — closer to v0.8's multi-engine routing model than to true distributed LLM inference
+- [ ] Video generation comes after image generation is solid — much higher VRAM and longer generation time, scope separately once image routing is proven out
+- [ ] No standard OpenAI-spec endpoint exists yet for video generation — will likely need a HiveLink-specific endpoint until one is established industry-wide
+
+---
+
 ## 💡 Future ideas (unscheduled)
 
 - **watchOS / Android companion** — cluster status glanceable on wrist or phone
