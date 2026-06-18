@@ -46,6 +46,8 @@ _last_stats: NodeStats | None = None
 
 API_PORT              = int(os.environ.get("HIVELINK_PORT", "47730"))
 LLAMA_CPP_SERVER_PORT = int(os.environ.get("LLAMA_CPP_PORT", "8080"))
+# Static peers: comma-separated IPs, e.g. "192.168.1.112" or "192.168.1.112:47730"
+_STATIC_PEERS = [p.strip() for p in os.environ.get("HIVELINK_PEERS", "").split(",") if p.strip()]
 DASHBOARD_PATH        = Path(__file__).parent.parent / "dashboard" / "index.html"
 STATS_INTERVAL        = 2.0   # seconds between live stats broadcasts
 
@@ -63,7 +65,10 @@ async def lifespan(app: FastAPI):
         api_port       = API_PORT,
         hardware       = _hardware,
         on_peer_change = _on_peer_change,
+        static_peers   = _STATIC_PEERS,
     )
+    if _STATIC_PEERS:
+        logger.info("Static peers: %s", _STATIC_PEERS)
     peer_task  = asyncio.create_task(_discovery.start())
     stats_task = asyncio.create_task(_stats_loop())
     yield

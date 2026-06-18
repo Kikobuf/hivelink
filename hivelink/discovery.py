@@ -12,6 +12,11 @@ import logging
 import socket
 import time
 import uuid
+
+try:
+    import httpx as _httpx
+except ImportError:
+    _httpx = None  # type: ignore
 from dataclasses import dataclass, field, asdict
 from typing import Callable
 
@@ -61,11 +66,13 @@ class DiscoveryService:
         api_port: int,
         hardware: HardwareProfile,
         on_peer_change: Callable[[dict[str, PeerInfo]], None] | None = None,
+        static_peers: list[str] | None = None,
     ):
-        self.node_id       = node_id
-        self.api_port      = api_port
-        self.hardware      = hardware
+        self.node_id        = node_id
+        self.api_port       = api_port
+        self.hardware       = hardware
         self.on_peer_change = on_peer_change
+        self.static_peers   = static_peers or []   # list of "ip" or "ip:port"
         self.peers: dict[str, PeerInfo] = {}
         self._hostname = socket.gethostname()
         self._running  = False
@@ -160,6 +167,46 @@ class DiscoveryService:
         if self.on_peer_change:
             self.on_peer_change(self.peers)
 
+    async def _static_peer_poller(self) -> None:
+        """Poll static peers by IP every ANNOUNCE_INTERVAL seconds."""
+        if not _httpx or not self.static_peers:
+            return
+        while self._running:
+            for addr in self.static_peers:
+                if ":" in addr:
+                    ip, port = addr.rsplit(":", 1)
+                    port = int(port)
+                else:
+                    ip, port = addr, 47730
+                try:
+                    async with _httpx.AsyncClient(timeout=2) as client:
+                        resp = await client.get(f"http://{ip}:{port}/api/cluster")
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            for peer_data in data.get("peers", []):
+                                node_id = peer_data.get("node_id")
+                                if not node_id or node_id == self.node_id:
+                                    continue
+                                hw = peer_data.get("hardware", {})
+                                existing = self.peers.get(node_id)
+                                self.peers[node_id] = PeerInfo(
+                                    node_id  = node_id,
+                                    hostname = ip,
+                                    api_port = peer_data.get("api_port", port),
+                                    hardware = hw,
+                                    last_seen= time.monotonic(),
+                                    is_self  = False,
+                                )
+                                if not existing:
+                                    logger.info("Static peer connected: %s @ %s", node_id[:8], ip)
+                                    self._notify()
+                                else:
+                                    # refresh last_seen — reaper won't kill it
+                                    self.peers[node_id].last_seen = time.monotonic()
+                except Exception as e:
+                    logger.debug("Static peer poll error %s: %s", ip, e)
+            await asyncio.sleep(ANNOUNCE_INTERVAL)
+
     async def start(self) -> None:
         self._running = True
         self.peers[self.node_id] = PeerInfo(
@@ -170,11 +217,11 @@ class DiscoveryService:
             is_self  = True,
         )
         logger.info("Discovery started — node_id=%s port=%d", self.node_id[:8], DISCOVERY_PORT)
-        await asyncio.gather(
-            self._broadcaster(),
-            self._listener(),
-            self._reaper(),
-        )
+        tasks = [self._broadcaster(), self._listener(), self._reaper()]
+        if self.static_peers:
+            logger.info("Static peers configured: %s", self.static_peers)
+            tasks.append(self._static_peer_poller())
+        await asyncio.gather(*tasks)
 
     async def stop(self) -> None:
         self._running = False

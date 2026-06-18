@@ -26,12 +26,16 @@ console = Console()
 
 @app.command()
 def start(
-    port: int  = typer.Option(47730, "--port", "-p", help="API server port"),
-    host: str  = typer.Option("0.0.0.0", "--host",  help="Bind host"),
-    reload: bool = typer.Option(False, "--reload",   help="Dev mode auto-reload"),
+    port:   int      = typer.Option(47730,    "--port",   "-p", help="API server port"),
+    host:   str      = typer.Option("0.0.0.0","--host",         help="Bind host"),
+    reload: bool     = typer.Option(False,    "--reload",        help="Dev mode auto-reload"),
+    peer:   list[str]= typer.Option([],       "--peer",   "-P",  help="Static peer IP[:port] — use when UDP discovery can't cross subnets. Can repeat: --peer 192.168.1.112 --peer 10.0.0.5"),
 ):
-    """Start the HiveLink node. Joins the cluster automatically via UDP discovery."""
+    """Start the HiveLink node. Joins the cluster via UDP discovery or static peers."""
     os.environ["HIVELINK_PORT"] = str(port)
+    if peer:
+        os.environ["HIVELINK_PEERS"] = ",".join(peer)
+        console.print(f"[dim]Static peers:[/] {', '.join(peer)}")
     console.print(f"\n[bold green]HiveLink[/] starting on [cyan]http://{host}:{port}[/]")
     console.print(f"Dashboard: [cyan]http://localhost:{port}[/]\n")
     uvicorn.run(
