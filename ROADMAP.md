@@ -23,7 +23,7 @@
 
 ---
 
-## 🔨 v0.2 — Live stats (next)
+## ✅ v0.2 — Live stats
 
 > Goal: make the cluster view feel alive like EXO — real-time GPU%, temp, wattage per node.
 
@@ -39,7 +39,7 @@
 
 ---
 
-## 🔨 v0.3 — Model management
+## 🔨 v0.3 — Model management (next)
 
 > Goal: `hivelink pull llama3-70b` just works, no manual file hunting.
 
@@ -98,7 +98,20 @@
 
 ---
 
-## 🔨 v0.8 — Tool calling + MCP support
+## 🔨 v0.8 — Multi-engine support (per-node engine choice)
+
+> Goal: let each node run whichever engine the user prefers — Ollama, MLX, vLLM, llama-server — and pick which one to use per-model from the dashboard. Cross-node *splitting* stays on llama.cpp/GGUF (the only format that works the same across CUDA/Metal/ROCm); this is about choosing a full standalone model+engine per node, not cross-engine layer splitting.
+
+- [ ] Model dropdown shows engine alongside model name — e.g. "llama3.2 (MLX · Mac mini)" vs "llama3.2 (Ollama · Windows)"
+- [ ] Dashboard lets you pick which node/engine handles a given chat request when not using cluster-split mode
+- [ ] MLX install guide for Mac — `pip install mlx-lm`, run `mlx_lm.server`, HiveLink auto-detects via existing engine detection
+- [ ] vLLM install guide for NVIDIA — `pip install vllm`, run `vllm serve`, HiveLink auto-detects via existing engine detection
+- [ ] Document the constraint clearly in UI: cross-node layer splitting requires llama.cpp/GGUF on all participating nodes; MLX/vLLM nodes serve standalone (non-split) models only, selectable individually
+- [ ] (Stretch, no committed timeline) Investigate cross-engine pipeline splitting — different tensor formats and activation protocols make this a hard problem, likely its own research spike rather than a quick feature
+
+---
+
+## 🔨 v0.9 — Tool calling + MCP support
 
 > Goal: let local models use tools — web search, file access, custom MCP servers — the same way Claude Desktop does, but running on your own cluster.
 
@@ -107,7 +120,38 @@
 - [ ] MCP bridge — HiveLink connects to MCP servers (stdio/HTTP), forwards tool calls from the model, returns results for the next turn
 - [ ] New "Tools" tab in dashboard — connect/manage MCP servers (web search, filesystem, custom servers like KB Rides Shopify MCP)
 - [ ] Tool-call indicator in chat — "Calling web_search…" animation similar to the thinking-dots display
-- [ ] Note: tool-calling reliability scales with model size — this is a natural pull toward running larger models (Qwen2.5-72B, Llama3-70B) across the cluster, which is exactly what HiveLink is for
+- [ ] Note: tool-calling reliability scales with model size — this is a natural pull toward running larger models (Qwen2.5-32B+) across the cluster, which is exactly what HiveLink is for
+
+---
+
+## 🔨 v0.10 — `hivelink launch <tool>` (agent tool integrations)
+
+> Goal: copy Ollama's `ollama launch <tool>` pattern — one command installs, configures, and starts an agent tool already wired to your HiveLink cluster instead of a single machine. ([Reference: Ollama's integration docs](https://docs.ollama.com/integrations))
+
+- [ ] **Anthropic-compatible API shim** — translate Claude's Messages API shape to/from HiveLink's existing OpenAI-compatible backend, so `ANTHROPIC_BASE_URL=http://localhost:47730` works directly (Ollama already proved this is solvable: see their `claude-code` integration)
+- [ ] `hivelink launch claude` — installs Claude Code if missing, model picker pulls from cluster's live models, sets `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` automatically, launches
+- [ ] `hivelink launch openclaw` — same pattern for OpenClaw (directly relevant — this is what James/Kimi K2 already runs); model picker, gateway config, launch
+- [ ] Context-length guard — both Claude Code and OpenClaw need ~64k+ context to behave well as agents; warn in the model picker if a selected model's context window is too small
+- [ ] `hivelink launch --model <name>` — skip the picker, launch directly with a named cluster model (mirrors Ollama's `--model` flag)
+- [ ] Document recommended model sizes for agentic use (32B+ tends to be the practical floor for reliable tool use, matching Ollama's own recommendations for these integrations)
+- [ ] Stretch: extend the same pattern to other agent tools as they gain Anthropic/OpenAI-compatible support (Codex, Goose, Cline, etc.)
+
+---
+
+## 🔬 v0.11 — Cross-engine pipeline splitting (research spike, not committed)
+
+> Goal: investigate whether a single model's layers could be split across *different* inference engines on different nodes (e.g. vLLM layers on Windows + MLX layers on Mac for the same model) — not promised as a shippable feature, since no existing project has solved this cleanly.
+
+**Why this is hard, stated plainly:**
+- **Incompatible weight formats** — GGUF (llama.cpp), safetensors (vLLM), and MLX's own quantized format are different on-disk representations; there's no clean shared format to split a model across them without per-node conversion at load time
+- **Incompatible activation handoff** — HiveLink's current pipeline splitting works because all llama.cpp nodes share the same tensor layout for passing activations between layers; vLLM and MLX have different internal tensor shapes/dtypes at layer boundaries, so a translation layer would need to be built from scratch
+- **No prior art** — EXO doesn't do this; nothing in the open-source distributed-inference space currently does this across engine families
+
+**Scoped as a spike, not a feature:**
+- [ ] Prototype a single-layer-boundary handoff between llama.cpp and one other engine (likely MLX, since Apple Silicon nodes are the most natural pairing) — purely to test feasibility
+- [ ] Measure conversion overhead per activation handoff — if it's too slow to be worth it, document why and close this out
+- [ ] Decision point after the prototype: pursue as a real feature, or formally mark as "not pursuing" with reasoning recorded here so it doesn't get re-asked every few months
+- [ ] If pursued: would need its own dedicated milestone (v1.x), this spike is scoping only
 
 ---
 
