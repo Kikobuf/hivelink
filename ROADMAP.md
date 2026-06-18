@@ -98,6 +98,19 @@
 
 ---
 
+## 🔨 v0.8 — Tool calling + MCP support
+
+> Goal: let local models use tools — web search, file access, custom MCP servers — the same way Claude Desktop does, but running on your own cluster.
+
+- [ ] OpenAI-compatible tool calling — extend `/v1/chat/completions` to accept and return `tools` / `tool_calls`
+- [ ] "Tool-capable" badge on models in dashboard — not all local models handle function calling reliably (Llama 3.x, Qwen2.5, Mistral are solid; smaller/older models often hallucinate calls)
+- [ ] MCP bridge — HiveLink connects to MCP servers (stdio/HTTP), forwards tool calls from the model, returns results for the next turn
+- [ ] New "Tools" tab in dashboard — connect/manage MCP servers (web search, filesystem, custom servers like KB Rides Shopify MCP)
+- [ ] Tool-call indicator in chat — "Calling web_search…" animation similar to the thinking-dots display
+- [ ] Note: tool-calling reliability scales with model size — this is a natural pull toward running larger models (Qwen2.5-72B, Llama3-70B) across the cluster, which is exactly what HiveLink is for
+
+---
+
 ## 💡 Future ideas (unscheduled)
 
 - **watchOS / Android companion** — cluster status glanceable on wrist or phone
