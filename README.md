@@ -1,218 +1,222 @@
-# HiveLink
+<div align="center">
 
-**Run large AI models across your mixed-hardware devices — Mac, Windows, Linux, NVIDIA, AMD, Apple Silicon.**
+<!-- ── HERO IMAGE GOES HERE ── -->
+<img src="docs/images/cluster-viz.png" alt="HiveLink cluster visualization" width="860"/>
 
-HiveLink is a cross-platform distributed LLM inference system. It pools the memory and compute of every machine on your LAN into a single AI cluster, then automatically splits model layers across them so you can run models that don't fit on any single device.
+<h1>HiveLink</h1>
 
-Think of it as EXO — but it actually works on Windows and NVIDIA.
+<p><strong>Pool your Mac, Windows, and Linux machines into one AI cluster.<br/>Run models too big for any single device — no cloud, no config, no nonsense.</strong></p>
 
----
+[![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)](https://github.com/Kikobuf/hivelink)
+[![Backend](https://img.shields.io/badge/backend-llama.cpp-orange?style=flat-square)](https://github.com/ggerganov/llama.cpp)
 
-## How it works
+<!-- ── DEMO GIF GOES HERE ── -->
+<img src="docs/images/demo.gif" alt="HiveLink demo" width="860"/>
 
-HiveLink uses **pipeline parallelism**: it splits a model's transformer layers across your devices, so each machine processes its assigned chunk and passes the result to the next. The split is weighted by each device's VRAM and compute — your RTX 3080 Ti gets more layers than a CPU-only node.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Llama 3 70B — Q4 — split across 2 nodes                       │
-├─────────────────────────────────────┬───────────────────────────┤
-│  Windows · RTX 3080 Ti (12GB CUDA)  │  Mac mini · M2 Pro (Metal)│
-│  Layers 0–31  (40%)                 │  Layers 32–79  (60%)      │
-└─────────────────────────────────────┴───────────────────────────┘
-         ↑ token in                            ↓ token out
-```
-
-All nodes use **llama.cpp** as the inference backend — the same GGUF model file works on every OS and GPU. No format conversion between nodes, so performance is close to single-device.
+</div>
 
 ---
 
-## Supported hardware
+## What is HiveLink?
 
-| Platform            | OS            | GPU                  | Backend   |
-|---------------------|---------------|----------------------|-----------|
-| Apple Silicon Mac   | macOS 12+     | Unified memory (any) | Metal     |
-| Windows PC          | Windows 10/11 | NVIDIA RTX / GTX     | CUDA      |
-| Linux workstation   | Ubuntu 22+    | NVIDIA / AMD         | CUDA/ROCm |
-| Any machine         | Any           | None needed          | CPU       |
-| Raspberry Pi / SBC  | Linux (ARM)   | None needed          | CPU       |
+HiveLink splits large language models across every machine on your LAN so you can run models that don't fit on any single device. Your RTX 3080 Ti handles some layers, your Mac mini handles the rest — they work together as one cluster.
+
+- **Zero config** — nodes find each other automatically via UDP broadcast
+- **Mixed hardware** — NVIDIA, AMD, Apple Silicon, and CPU nodes all work together
+- **OpenAI-compatible API** — drop-in replacement, works with any existing client
+- **Live dashboard** — EXO-style cluster viz with real-time GPU%, temperature, and wattage
+- **Built on llama.cpp** — same GGUF format everywhere, full CUDA/ROCm/Metal support
+
+> **Think EXO, but it actually works on Windows and NVIDIA.**
 
 ---
 
 ## Quick start
 
 ```bash
-# 1. Install (same command on all platforms)
+# Install
 pip install hivelink
+pip install "hivelink[nvidia]"   # NVIDIA GPU
+pip install "hivelink[amd]"      # AMD GPU
 
-# With NVIDIA GPU
-pip install "hivelink[nvidia]"
-
-# 2. Install llama.cpp backend
-hivelink install-llama
-
-# 3. Start the node daemon on EVERY machine
+# Run on every machine — they find each other automatically
 hivelink start
 
-# 4. Check your cluster (from any node)
-hivelink status
-hivelink models
-hivelink plan llama3-70b
+# If machines are on different subnets, use static peers
+hivelink start --peer 192.168.1.112
 ```
 
-Nodes discover each other automatically via UDP broadcast — no config needed as long as they're on the same LAN.
+Open **http://localhost:47730** — your cluster dashboard appears instantly.
 
 ---
 
 ## Dashboard
 
-Open `http://localhost:47730` (or `http://localhost:47730/dashboard`) in your browser to see:
+<!-- ── DASHBOARD SCREENSHOT GOES HERE ── -->
+<img src="docs/images/dashboard-cluster.png" alt="HiveLink cluster page" width="860"/>
 
-- All discovered nodes with backend type, memory, and TFLOPS
-- Models your cluster can run
-- Live layer distribution visualization — shows exactly which device handles which layers
-- OpenAI-compatible API reference
+The dashboard shows every node with live stats updating every 2 seconds:
+
+- **GPU utilization bar** — green, live
+- **Temperature** — amber badge (NVIDIA; Apple Silicon in v0.5)
+- **Power draw** — wattage per GPU
+- **CPU utilization** — all nodes
+- **Engine detection** — Ollama, MLX, vLLM, or llama-server badge auto-appears
+- **Dashed arrows** between nodes showing the pipeline data flow
+
+---
+
+## Chat
+
+<!-- ── CHAT SCREENSHOT GOES HERE ── -->
+<img src="docs/images/chat.png" alt="HiveLink chat interface" width="860"/>
+
+Built-in chat at `http://localhost:47730` — no separate Open WebUI needed:
+
+- Streaming responses with tok/s counter
+- **Mini cluster panel** — live node stats visible while you chat
+- Conversation history saved in browser localStorage
+- Temperature, max tokens, top P, and system prompt controls
+- Chain-of-thought display for reasoning models (DeepSeek-R1, etc.)
+
+---
+
+## Supported hardware
+
+| Platform | OS | Backend | Status |
+|---|---|---|---|
+| 🍎 Apple Silicon Mac | macOS 12+ | Metal | ✅ Full support |
+| 🪟 Windows (NVIDIA) | Windows 10/11 | CUDA | ✅ Full support |
+| 🪟 Windows (AMD) | Windows 10/11 | ROCm | ✅ Full support |
+| 🐧 Linux (NVIDIA) | Ubuntu 22+ | CUDA | ✅ Full support |
+| 🐧 Linux (AMD) | Ubuntu 22+ | ROCm | ✅ Full support |
+| 💻 CPU-only node | Any | CPU | ✅ Supported |
+
+---
+
+## How it works
+
+HiveLink uses **pipeline parallelism** — transformer layers are split sequentially across nodes. Each machine processes its chunk and passes activations to the next node in the pipeline.
+
+```
+Prompt ──▶ [Windows · RTX 3080 Ti]  layers 0–31  (CUDA)
+                        │
+                        ▼ activations over LAN
+           [Mac mini · M4]           layers 32–79 (Metal)
+                        │
+                        ▼
+                    Response
+```
+
+Layer assignment is weighted by `√VRAM × log(TFLOPS)` — more capable nodes get more layers. All nodes use **llama.cpp** with GGUF models — no format conversion between nodes.
+
+---
+
+## Supported models
+
+Any GGUF model works. Known models get automatic memory feasibility checking:
+
+| Model | Params | Min VRAM (Q4) |
+|---|---|---|
+| llama3.2 | 3B | 2 GB |
+| llama3-8b | 8B | 5 GB |
+| llama3-70b | 70B | 40 GB |
+| llama3-405b | 405B | 230 GB |
+| qwen2.5-7b | 7B | 4 GB |
+| qwen2.5-32b | 32B | 18 GB |
+| qwen2.5-72b | 72B | 41 GB |
+| mistral-7b | 7B | 4 GB |
+| mixtral-8x7b | 47B | 26 GB |
+| deepseek-r1-7b | 7B | 4 GB |
+| gemma2-9b | 9B | 5 GB |
+| gemma2-27b | 27B | 15 GB |
 
 ---
 
 ## OpenAI-compatible API
-
-HiveLink exposes a drop-in replacement for the OpenAI API:
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:47730/v1",
-    api_key="hivelink",  # any value
+    api_key="hivelink",
 )
 
 response = client.chat.completions.create(
-    model="llama3-70b",
+    model="llama3.2:latest",
     messages=[{"role": "user", "content": "Hello!"}],
     stream=True,
 )
 
 for chunk in response:
-    print(chunk.choices.delta.content, end="")
+    print(chunk.choices[0].delta.content or "", end="")
 ```
 
-Works with any OpenAI-compatible client: LangChain, LlamaIndex, Open WebUI, SillyTavern, etc.
+Works with **LangChain**, **LlamaIndex**, **Open WebUI**, **SillyTavern**, **Cursor**, and any OpenAI-compatible client.
 
 ---
 
-## CLI reference
+## CLI
 
 ```
-hivelink start          Start the node daemon
-hivelink status         Show all cluster nodes
-hivelink models         List models the cluster can run
-hivelink plan <model>   Show layer distribution plan
-hivelink hardware       Detect this machine's hardware
-hivelink install-llama  Download llama.cpp server binary
+hivelink start                     Start this node (joins cluster automatically)
+hivelink start --peer 192.168.1.x  Start with a static peer (cross-subnet)
+hivelink status                    Show all nodes in the cluster
+hivelink models                    List models the cluster can run
+hivelink plan llama3-70b           Show layer distribution plan
+hivelink hardware                  Detect this machine's hardware
 ```
 
 ---
 
-## Supported models
+## Networking
 
-| Model           | Params | Layers |
-|-----------------|--------|--------|
-| llama3-8b       | 8B     | 32     |
-| llama3-70b      | 70B    | 80     |
-| llama3-405b     | 405B   | 126    |
-| qwen2.5-7b      | 7B     | 28     |
-| qwen2.5-14b     | 14B    | 48     |
-| qwen2.5-32b     | 32B    | 64     |
-| qwen2.5-72b     | 72B    | 80     |
-| mistral-7b      | 7B     | 32     |
-| deepseek-r1-70b | 70B    | 80     |
-| gemma2-27b      | 27B    | 46     |
+### Same LAN (default)
+Plug both machines into your router — nodes find each other automatically via UDP broadcast.
 
-Any GGUF model from Hugging Face works — the known models list just enables memory feasibility checking.
+### Different subnets
+```bash
+# Windows
+hivelink start --peer 192.168.1.112
 
----
-
-
-## Connecting machines — Ethernet & direct links
-
-WiFi works for HiveLink, but a wired connection gives lower latency and higher bandwidth for passing activation tensors between layers.
-
-### Option 1 — Both plugged into the same router (recommended)
-
-The simplest setup. Plug both machines into your router with Ethernet. UDP discovery works exactly the same as WiFi — no extra config needed.
-
-```
-[Windows PC] ──Ethernet──┐
-                          ├── [Router/Switch]
-[Mac mini]   ──Ethernet──┘
+# Mac
+hivelink start --peer 192.168.1.115
 ```
 
-Both machines get LAN IPs (e.g. `192.168.1.x`) and discover each other automatically.
+### Connection speed
 
----
+| Connection | Bandwidth | Notes |
+|---|---|---|
+| WiFi (5 GHz) | ~300 Mbps | Fine for 7B–13B models |
+| Gigabit Ethernet | ~940 Mbps | Recommended for 70B+ |
+| Thunderbolt bridge | ~9,000 Mbps | Best for side-by-side machines |
 
-### Option 2 — Direct Ethernet cable, no router
-
-Connect both machines with a single Ethernet cable for the lowest latency. Modern network cards support Auto-MDIX so a regular patch cable works — no crossover needed.
-
-You need static IPs since there's no DHCP router:
-
-**Windows:** Settings → Network & Internet → Ethernet → Edit IP assignment → Manual
-- IPv4: `192.168.100.1` · Subnet: `255.255.255.0` · Gateway: leave blank
-
-**Mac:** System Settings → Network → Ethernet → Details → TCP/IP → Configure IPv4: Manually
-- IP: `192.168.100.2` · Subnet: `255.255.255.0` · Router: leave blank
-
-Start HiveLink on both — they discover each other over the direct link.
-
-> **Tip:** Direct Ethernet delivers ~940 Mbps vs ~300 Mbps typical WiFi. For large models this cuts inter-node latency by 3–4×.
-
----
-
-### Option 3 — Thunderbolt / USB4 bridge (fastest)
-
-If both machines have Thunderbolt ports, a single Thunderbolt cable creates a 10 Gbps network bridge — 10× faster than Gigabit Ethernet.
-
-1. Connect with a Thunderbolt cable
-2. macOS auto-creates a Thunderbolt Bridge adapter
-3. Windows: Device Manager → Network Adapters → Thunderbolt Networking
-4. Assign static IPs same as Option 2 above
-
-Ideal for a Mac mini + Windows PC sitting side by side — activation tensors transfer almost instantly.
-
----
-
-### Option 4 — Cross-location via Tailscale
-
-If your machines are on different networks, [Tailscale](https://tailscale.com) creates a free virtual LAN between them.
+### Auto-start on Mac
 
 ```bash
-# Install on both machines, then:
-tailscale up
-# Each machine gets a 100.x.x.x IP — HiveLink discovery works across these
+cat > ~/Library/LaunchAgents/com.hivelink.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.hivelink</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/hivelink</string>
+        <string>start</string>
+        <string>--peer</string>
+        <string>YOUR_WINDOWS_IP</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+</dict>
+</plist>
+EOF
+launchctl load ~/Library/LaunchAgents/com.hivelink.plist
 ```
-
-> Note: Tailscale routes over the internet so bandwidth is limited by your upload speed. Good for testing, not high-throughput inference.
-
----
-
-### Verify your connection speed
-
-```bash
-# Install iperf3: Windows: winget install iperf3 | Mac: brew install iperf3
-
-# On the receiving machine:
-iperf3 -s
-
-# On the sending machine:
-iperf3 -c <IP of receiving machine>
-```
-
-| Connection type      | Typical bandwidth |
-|----------------------|-------------------|
-| WiFi (5 GHz)         | ~300 Mbps         |
-| Gigabit Ethernet     | ~940 Mbps         |
-| Thunderbolt bridge   | ~9,000 Mbps       |
 
 ---
 
@@ -220,31 +224,45 @@ iperf3 -c <IP of receiving machine>
 
 ```
 hivelink/
-├── hardware.py     Hardware detection (CUDA/Metal/ROCm/CPU, VRAM, TFLOPS)
-├── discovery.py    UDP broadcast peer discovery — zero config
-├── scheduler.py    Layer assignment algorithm — weighted by VRAM × compute
-├── server.py       FastAPI server — REST API, WebSocket, OpenAI-compatible
-└── cli.py          Typer CLI
+├── hardware.py     Hardware detection — NVIDIA/AMD/Apple Silicon/CPU
+├── discovery.py    UDP broadcast + static peer discovery
+├── scheduler.py    Layer assignment weighted by VRAM × compute
+├── stats.py        Live stats — GPU util%, temp, wattage via nvidia-smi + psutil
+├── server.py       FastAPI — REST, WebSocket, OpenAI-compatible API
+└── cli.py          CLI with --peer flag for cross-subnet setups
 
 dashboard/
-└── index.html      Self-contained dashboard — no build step
+└── index.html      Self-contained dashboard — no build step, no npm
 ```
 
 ---
 
-## Why not just use EXO?
+## Why not EXO?
 
-EXO is Mac-first. Windows isn't supported. NVIDIA GPU detection is buggy (GPUs register as 0 TFLOPS). The mixed-backend approach (MLX + tinygrad) causes 90% throughput loss when crossing node types.
-
-HiveLink uses llama.cpp everywhere — the same GGUF format, same binary protocol for activations, full CUDA/ROCm/Metal support with zero conversion overhead.
+| | HiveLink | EXO |
+|---|---|---|
+| Windows support | ✅ Full | ❌ Not supported |
+| NVIDIA CUDA | ✅ Full | ⚠️ Buggy (reports 0 TFLOPS) |
+| AMD ROCm | ✅ Supported | ❌ Not supported |
+| Model format | GGUF (universal) | MLX + tinygrad (Mac-only) |
+| Mixed backends | ✅ CUDA + Metal together | ❌ Throughput loss |
+| Live stats | ✅ GPU%, temp, wattage | ✅ GPU%, temp, wattage |
+| Built-in chat | ✅ Yes | ✅ Yes |
 
 ---
 
 ## Roadmap
 
-- [ ] Automatic model download from Hugging Face Hub
-- [ ] Tensor parallelism for same-LAN high-bandwidth setups
-- [ ] Web UI chat interface (not just API)
-- [ ] Docker image for easy deployment
-- [ ] Tailscale support for cross-network clusters
-- [ ] Windows installer (.exe)
+- [x] v0.1 — UDP discovery, pipeline parallelism, OpenAI API, dashboard
+- [x] v0.2 — Live GPU/CPU stats, EXO-style viz, mini cluster in chat, static peers
+- [ ] v0.3 — `hivelink pull <model>`, model streaming across nodes
+- [ ] v0.4 — Sharding controls (pipeline vs tensor), instances, minimum nodes
+- [ ] v0.5 — Native installers (Windows `.exe`, macOS `.dmg`, Linux AppImage)
+- [ ] v0.6 — Vision model support, file uploads in chat
+- [ ] v0.7 — Cross-network via Tailscale
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE)
