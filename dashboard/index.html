@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>HiveLink</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -16,7 +16,7 @@
 }
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
 
-/* Header */
+/* ── Header ── */
 .header{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--surface);border-bottom:1px solid var(--border)}
 .logo{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;letter-spacing:-.02em;user-select:none}
 .logo-hex{width:26px;height:26px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center}
@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .dot.error{background:var(--red)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* Layout */
+/* ── Layout ── */
 .layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 52px)}
 .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column}
 .nav-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;color:var(--muted);font-size:13px;border-left:2px solid transparent;transition:all .15s}
@@ -47,12 +47,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .sstat-value{font-size:18px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
 .sstat-sub{font-size:10px;color:var(--muted);margin-top:1px}
 
-/* Conversation history in sidebar */
+/* ── Mini cluster in sidebar ── */
+.mini-cluster{padding:10px 12px}
+.mini-cluster-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600}
+.mini-node{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)}
+.mini-node:last-child{border-bottom:none}
+.mini-node-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mini-node-name{font-size:11px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-bar-wrap{width:48px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.mini-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.mini-node-pct{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:26px;text-align:right;flex-shrink:0}
+.mini-node-temp{font-size:10px;font-family:var(--mono);color:var(--amber);flex-shrink:0}
+
+/* ── Conv history ── */
 .conv-section{flex:1;overflow-y:auto;padding:0 0 8px}
 .conv-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .conv-clear-all{font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;padding:2px 4px;border-radius:3px}
 .conv-clear-all:hover{color:var(--red)}
-.conv-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;border-radius:0}
+.conv-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent;transition:all .15s}
 .conv-item:hover{background:var(--surface2);border-left-color:var(--border2)}
 .conv-item.active-conv{background:var(--accent-dim);border-left-color:var(--accent)}
 .conv-item-text{flex:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -63,7 +75,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .conv-new-btn{display:flex;align-items:center;gap:7px;margin:8px 12px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s}
 .conv-new-btn:hover{color:var(--text);border-color:var(--accent)}
 
-/* Main */
+/* ── Main ── */
 .main{overflow:auto}
 .page{display:none;padding:24px}
 .page.active{display:block}
@@ -71,62 +83,31 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .page-title{font-size:16px;font-weight:600;letter-spacing:-.01em}
 .page-sub{font-size:12px;color:var(--muted);margin-top:2px}
 
-/* Cards */
+/* ── Cards ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 
-/* EXO-style node cards */
-.cluster-nodes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;padding:20px}
-.cluster-empty{padding:48px 24px;text-align:center;color:var(--muted)}
-.node-card{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;transition:border-color .2s}
-.node-card:hover{border-color:var(--border2)}
-.node-stat-bar-wrap{margin-top:3px}
-.node-util-track{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:2px}
-.node-util-fill{height:100%;border-radius:2px;transition:width 0.8s ease}
-.node-temp{font-size:10px;font-family:var(--mono);color:var(--amber)}
-.node-power{font-size:10px;font-family:var(--mono);color:var(--muted)}
-.node-engine-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:.04em;background:var(--surface3);border:1px solid var(--border2);color:var(--muted);font-family:var(--mono)}
-.node-engine-pill.ollama{color:#3fb950;border-color:#3fb95044;background:#3fb95012}
-.node-engine-pill.mlx{color:#a8b3c4;border-color:#a8b3c444;background:#a8b3c412}
-.node-engine-pill.vllm{color:#76b900;border-color:#76b90044;background:#76b90012}
-.node-engine-pill.llama-server{color:#d29922;border-color:#d2992244;background:#d2992212}
-.node-active-pulse{animation:pulse-border 1.5s ease-in-out infinite}
-@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(47,129,247,0)}50%{box-shadow:0 0 0 3px rgba(47,129,247,0.25)}}
-.node-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);gap:6px;min-width:0}
-.node-card-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0;flex:1}
-.node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 5px;flex-shrink:0;white-space:nowrap}
-.node-card-backend{font-size:10px;flex-shrink:0}
-.node-card-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.node-stat-row{display:flex;align-items:center;justify-content:space-between;font-size:11px}
-.node-stat-label{color:var(--muted);font-size:10px}
-.node-stat-val{font-family:var(--mono);font-size:11px;font-weight:600}
-.node-mem-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:3px}
-.node-mem-fill{height:100%;border-radius:3px;transition:width .6s}
-.node-card-footer{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;gap:10px;justify-content:space-between}
-.node-gpu-name{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
-
-/* EXO-style node boxes */
-.exo-node{position:absolute;width:160px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
-.exo-node.active-inference{border-color:var(--accent);box-shadow:0 0 0 2px rgba(47,129,247,.2);animation:pulse-border 1.5s ease-in-out infinite}
-.exo-node-header{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600}
-.exo-node-name{display:flex;align-items:center;gap:5px}
-.exo-node-body{padding:8px 9px;display:flex;flex-direction:column;gap:5px}
-.exo-util-row{display:flex;align-items:center;justify-content:space-between;font-size:10px}
-.exo-util-label{color:var(--muted);width:28px;flex-shrink:0}
-.exo-util-val{font-family:var(--mono);font-size:10px;min-width:28px;text-align:right;flex-shrink:0}
-.exo-bar-wrap{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin:0 6px}
+/* ── EXO-style node boxes ── */
+.exo-node{position:absolute;width:168px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.exo-node.active-inference{border-color:var(--accent);box-shadow:0 0 0 2px rgba(47,129,247,.15);animation:pulse-border 1.5s ease-in-out infinite}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(47,129,247,0)}50%{box-shadow:0 0 0 3px rgba(47,129,247,.2)}}
+.exo-node-header{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;gap:4px}
+.exo-node-name{display:flex;align-items:center;gap:5px;min-width:0;flex:1;overflow:hidden}
+.exo-node-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exo-node-body{padding:7px 8px;display:flex;flex-direction:column;gap:4px}
+.exo-util-row{display:flex;align-items:center;gap:4px;height:16px}
+.exo-util-label{font-size:9px;color:var(--muted);width:24px;flex-shrink:0;font-weight:600;letter-spacing:.04em}
+.exo-bar-wrap{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
 .exo-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
-.exo-badges{display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap}
-.exo-mem-text{font-family:var(--mono);font-size:10px;color:var(--muted)}
-.exo-stat-pill{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;background:var(--surface3);border:1px solid var(--border2)}
-.exo-temp{color:var(--amber)}
-.exo-power{color:var(--muted)}
+.exo-util-val{font-size:10px;font-family:var(--mono);min-width:26px;text-align:right;flex-shrink:0;color:var(--text)}
+.exo-stat-badge{font-size:9px;font-family:var(--mono);padding:1px 4px;border-radius:3px;flex-shrink:0}
+.exo-temp{color:var(--amber);background:#d2992215;border:1px solid #d2992230}
+.exo-power{color:var(--muted);background:var(--surface3);border:1px solid var(--border2)}
+.exo-footer{padding:4px 8px 6px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.exo-mem{font-size:10px;font-family:var(--mono);color:var(--muted)}
+.node-card-self{font-size:9px;background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;border-radius:3px;padding:1px 4px;flex-shrink:0}
 
-/* Connection arrows between nodes */
-.cluster-viz-wrap{position:relative}
-.cluster-arrows{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-
-/* Node table */
+/* ── Node table ── */
 .node-table{width:100%;border-collapse:collapse}
 .node-table th{text-align:left;padding:8px 16px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:var(--surface2)}
 .node-table td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -138,30 +119,34 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .node-hostname{font-size:10px;color:var(--muted);margin-top:1px}
 .gpu-cell{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
 
-/* Badges */
+/* ── Badges ── */
 .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.04em;font-family:var(--mono)}
 .badge-cuda{background:#76b90018;color:var(--cuda);border:1px solid #76b90044}
 .badge-metal{background:#a8b3c418;color:var(--metal);border:1px solid #a8b3c444}
 .badge-rocm{background:#e8534f18;color:var(--rocm);border:1px solid #e8534f44}
 .badge-cpu{background:#58a6ff18;color:var(--cpu);border:1px solid #58a6ff44}
-.badge-vulkan{background:#bc8cff18;color:var(--purple);border:1px solid #bc8cff44}
 .badge-self{background:var(--accent-dim);color:var(--accent);border:1px solid #2f81f744;font-family:inherit;font-size:9px}
+.node-engine-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:.04em;background:var(--surface3);border:1px solid var(--border2);color:var(--muted);font-family:var(--mono)}
+.node-engine-pill.ollama{color:var(--green);border-color:#3fb95044;background:#3fb95012}
+.node-engine-pill.mlx{color:var(--metal);border-color:#a8b3c444;background:#a8b3c412}
+.node-engine-pill.vllm{color:var(--cuda);border-color:#76b90044;background:#76b90012}
+.node-engine-pill.llama-server{color:var(--amber);border-color:#d2992244;background:#d2992212}
 
-/* Memory bar */
+/* ── Mem bar ── */
 .mem-bar{display:flex;align-items:center;gap:8px}
 .mem-track{flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
 .mem-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s}
 .mem-text{font-family:var(--mono);font-size:11px;color:var(--text);min-width:50px}
 
-/* Empty */
+/* ── Empty ── */
 .empty{display:flex;flex-direction:column;align-items:center;padding:48px 24px;gap:8px;color:var(--muted)}
 .empty-icon{font-size:28px;margin-bottom:4px}
 .empty-title{font-size:14px;font-weight:500;color:var(--text)}
 .empty-sub{font-size:12px;text-align:center;line-height:1.6}
 .empty code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--accent)}
 
-/* Models */
-.models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+/* ── Models ── */
+.models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .model-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
 .model-card:hover{border-color:var(--border2);background:var(--surface2)}
 .model-card.selected{border-color:var(--accent)}
@@ -176,7 +161,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .quant-pill{display:inline-block;padding:1px 6px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;font-size:10px;font-family:var(--mono);color:var(--muted)}
 .live-pill{display:inline-block;padding:1px 6px;background:#3fb95018;border:1px solid #3fb95044;border-radius:3px;font-size:10px;color:var(--green)}
 
-/* Layer plan */
+/* ── Layer plan ── */
 .layer-assignment{margin-bottom:12px}
 .layer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
 .layer-node-id{font-family:var(--mono);font-size:11px;color:var(--text);display:flex;align-items:center;gap:6px}
@@ -185,14 +170,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .layer-fill{height:100%;position:absolute;top:0;display:flex;align-items:center;padding:0 8px;font-size:10px;font-family:var(--mono);font-weight:600;white-space:nowrap;transition:width .6s cubic-bezier(.34,1.2,.64,1)}
 .layer-stats{display:flex;gap:12px;margin-top:5px;font-size:10px;color:var(--muted);align-items:center}
 
-/* Hardware tab */
+/* ── Hardware tab ── */
 .hw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .hw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .hw-card-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .hw-card-os-icon{width:32px;height:32px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 .hw-card-title{font-size:13px;font-weight:600}
 .hw-card-sub{font-size:10px;color:var(--muted);margin-top:2px}
-.hw-self-badge{margin-left:auto}
 .hw-rows{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
 .hw-row{display:flex;align-items:flex-start;gap:10px}
 .hw-row-icon{width:28px;height:28px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
@@ -203,7 +187,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .hw-gpu-name{font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px}
 .hw-gpu-specs{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:12px}
 
-/* Chat */
+/* ── Chat ── */
 .chat-layout{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start}
 .chat-wrap{display:flex;flex-direction:column;min-height:520px}
 .chat-toolbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
@@ -237,8 +221,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .chat-tps-val{color:var(--green);font-weight:600;min-width:36px;display:inline-block}
 .chat-tps.hidden{visibility:hidden}
 
-/* Config panel */
-.config-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:sticky;top:76px}
+/* ── Right panel (config + mini cluster) ── */
+.chat-right{display:flex;flex-direction:column;gap:12px;position:sticky;top:76px}
+.config-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .config-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between}
 .config-body{padding:14px}
 .config-row{margin-bottom:14px}
@@ -246,12 +231,31 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .config-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
 .config-val{font-family:var(--mono);font-size:11px;color:var(--accent)}
 .config-slider{width:100%;accent-color:var(--accent);cursor:pointer}
-.config-textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:7px 9px;color:var(--text);font-size:11px;font-family:inherit;resize:vertical;min-height:70px;outline:none;transition:border-color .15s;line-height:1.5}
+.config-textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:7px 9px;color:var(--text);font-size:11px;font-family:inherit;resize:vertical;min-height:60px;outline:none;transition:border-color .15s;line-height:1.5}
 .config-textarea:focus{border-color:var(--accent)}
 .config-reset{font-size:10px;color:var(--muted);cursor:pointer;background:none;border:none;padding:0}
 .config-reset:hover{color:var(--text)}
 
-/* API & Install */
+/* ── Mini cluster panel (in chat right) ── */
+.mini-cluster-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.mini-cluster-header{padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between}
+.mini-cluster-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.mini-node-row{display:flex;flex-direction:column;gap:3px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px}
+.mini-node-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.mini-node-label{font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;flex:1;min-width:0;overflow:hidden}
+.mini-node-label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-node-stats{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.mini-node-stat{font-size:10px;font-family:var(--mono)}
+.mini-util-row{display:flex;align-items:center;gap:5px}
+.mini-util-label{font-size:9px;color:var(--muted);width:22px;flex-shrink:0;font-weight:600}
+.mini-util-track{flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.mini-util-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.mini-util-val{font-size:9px;font-family:var(--mono);color:var(--muted);width:24px;text-align:right;flex-shrink:0}
+.mini-conn-line{display:flex;align-items:center;justify-content:center;height:10px;gap:2px}
+.mini-conn-dash{width:4px;height:1px;background:var(--border2)}
+.mini-conn-arrow{font-size:8px;color:var(--muted2)}
+
+/* ── API & Install ── */
 .code-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--text);overflow-x:auto;white-space:pre}
 .code-block .comment{color:var(--muted)}.code-block .cmd{color:var(--green)}.code-block .flag{color:var(--amber)}
 .api-box{font-family:var(--mono);font-size:12px}
@@ -268,7 +272,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .step-title{font-size:13px;font-weight:600;margin-bottom:6px;padding-top:1px}
 .step-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
 
-@media(max-width:900px){.chat-layout{grid-template-columns:1fr}.config-panel{position:static}}
+@media(max-width:900px){.chat-layout{grid-template-columns:1fr}.chat-right{position:static}}
 @media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}.header-stats{display:none}}
 </style>
 </head>
@@ -304,38 +308,28 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="sstat"><div class="sstat-label">Largest model (Q4)</div><div class="sstat-value" id="ss-maxmodel">—</div></div>
   </div>
   <div class="sidebar-sep" style="margin-top:10px"></div>
-  <!-- Conversation history -->
   <div class="conv-section" id="conv-section">
-    <div class="conv-header">
-      <span>Conversations</span>
-      <button class="conv-clear-all" onclick="clearAllConversations()" title="Clear all">Clear all</button>
-    </div>
-    <div class="conv-new-btn" onclick="newConversation()">
-      <i class="fa-solid fa-plus" style="font-size:10px"></i> New chat
-    </div>
+    <div class="conv-header"><span>Conversations</span><button class="conv-clear-all" onclick="clearAllConversations()">Clear all</button></div>
+    <div class="conv-new-btn" onclick="newConversation()"><i class="fa-solid fa-plus" style="font-size:10px"></i> New chat</div>
     <div id="conv-list"></div>
   </div>
 </nav>
 
 <div class="main">
 
-<!-- Cluster -->
+<!-- Cluster page -->
 <div class="page active" id="page-cluster">
   <div class="page-header"><div class="page-title">Cluster</div><div class="page-sub">Devices on your LAN — discovered automatically via UDP broadcast</div></div>
-  <!-- EXO-style cluster web -->
-  <div class="card" style="margin-bottom:16px;overflow:visible">
+  <div class="card" style="margin-bottom:16px">
     <div class="card-header">Live nodes</div>
-    <div id="cluster-viz-wrap" style="position:relative;min-height:320px;display:flex;align-items:center;justify-content:center;padding:24px">
-      <canvas id="cluster-arrows" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>
-      <div id="cluster-node-boxes" style="position:relative;width:100%;min-height:280px"></div>
-      <div id="cluster-empty-msg" class="empty" style="display:none">
-        <div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div>
-        <div class="empty-title">No nodes yet</div>
-        <div class="empty-sub">Run <code>hivelink start</code> on each machine</div>
+    <div id="cluster-viz-wrap" style="position:relative;width:100%">
+      <canvas id="cluster-arrows" style="position:absolute;top:0;left:0;pointer-events:none"></canvas>
+      <div id="cluster-node-boxes" style="position:relative;min-height:300px;width:100%"></div>
+      <div id="cluster-empty-msg">
+        <div class="empty"><div class="empty-icon"><i class="fa-solid fa-circle-nodes" style="color:var(--muted2)"></i></div><div class="empty-title">No nodes yet</div><div class="empty-sub">Run <code>hivelink start</code> on each machine</div></div>
       </div>
     </div>
   </div>
-  <!-- Node table -->
   <div class="card">
     <table class="node-table">
       <thead><tr><th>Node</th><th>Backend</th><th style="width:190px">Memory</th><th>TFLOPS</th><th>GPU</th></tr></thead>
@@ -344,18 +338,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
-<!-- Hardware -->
+<!-- Hardware page -->
 <div class="page" id="page-hardware">
   <div class="page-header"><div class="page-title">Hardware</div><div class="page-sub">Full specs for every connected node</div></div>
   <div class="hw-grid" id="hw-grid">
-    <div class="empty" style="grid-column:1/-1">
-      <div class="empty-icon"><i class="fa-solid fa-microchip" style="color:var(--muted2)"></i></div>
-      <div class="empty-title">No nodes connected</div>
-    </div>
+    <div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-microchip" style="color:var(--muted2)"></i></div><div class="empty-title">No nodes connected</div></div>
   </div>
 </div>
 
-<!-- Models -->
+<!-- Models page -->
 <div class="page" id="page-models">
   <div class="page-header"><div class="page-title">Models</div><div class="page-sub">Click a model to see the layer distribution plan</div></div>
   <div class="models-grid" id="models-grid">
@@ -367,7 +358,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
-<!-- Chat -->
+<!-- Chat page -->
 <div class="page" id="page-chat">
   <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Responses stream directly from your local models</div></div>
   <div class="chat-layout">
@@ -387,37 +378,32 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
       </div>
     </div>
-    <!-- Config panel -->
-    <div class="config-panel">
-      <div class="config-header">
-        <span><i class="fa-solid fa-sliders" style="margin-right:6px"></i>Settings</span>
-        <button class="config-reset" onclick="resetConfig()">Reset</button>
+    <!-- Right panel: config + mini cluster -->
+    <div class="chat-right">
+      <!-- Mini cluster -->
+      <div class="mini-cluster-panel" id="mini-cluster-panel">
+        <div class="mini-cluster-header"><span><i class="fa-solid fa-circle-nodes" style="margin-right:5px"></i>Cluster</span><span id="mini-cluster-tflops" style="font-family:var(--mono);color:var(--muted)"></span></div>
+        <div class="mini-cluster-body" id="mini-cluster-body">
+          <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">No nodes connected</div>
+        </div>
       </div>
-      <div class="config-body">
-        <div class="config-row">
-          <div class="config-label">Temperature <span class="config-val" id="cfg-temp-val">0.7</span></div>
-          <input type="range" class="config-slider" id="cfg-temp" min="0" max="2" step="0.05" value="0.7" oninput="updateConfig()">
-        </div>
-        <div class="config-row">
-          <div class="config-label">Max tokens <span class="config-val" id="cfg-tokens-val">2048</span></div>
-          <input type="range" class="config-slider" id="cfg-tokens" min="128" max="8192" step="128" value="2048" oninput="updateConfig()">
-        </div>
-        <div class="config-row">
-          <div class="config-label">Top P <span class="config-val" id="cfg-topp-val">1.0</span></div>
-          <input type="range" class="config-slider" id="cfg-topp" min="0" max="1" step="0.05" value="1.0" oninput="updateConfig()">
-        </div>
-        <div class="config-row">
-          <div class="config-label" style="margin-bottom:6px">System prompt</div>
-          <textarea class="config-textarea" id="cfg-system" placeholder="You are a helpful assistant…"></textarea>
+      <!-- Config -->
+      <div class="config-panel">
+        <div class="config-header"><span><i class="fa-solid fa-sliders" style="margin-right:6px"></i>Settings</span><button class="config-reset" onclick="resetConfig()">Reset</button></div>
+        <div class="config-body">
+          <div class="config-row"><div class="config-label">Temperature <span class="config-val" id="cfg-temp-val">0.70</span></div><input type="range" class="config-slider" id="cfg-temp" min="0" max="2" step="0.05" value="0.7" oninput="updateConfig()"></div>
+          <div class="config-row"><div class="config-label">Max tokens <span class="config-val" id="cfg-tokens-val">2048</span></div><input type="range" class="config-slider" id="cfg-tokens" min="128" max="8192" step="128" value="2048" oninput="updateConfig()"></div>
+          <div class="config-row"><div class="config-label">Top P <span class="config-val" id="cfg-topp-val">1.00</span></div><input type="range" class="config-slider" id="cfg-topp" min="0" max="1" step="0.05" value="1.0" oninput="updateConfig()"></div>
+          <div class="config-row"><div class="config-label" style="margin-bottom:6px">System prompt</div><textarea class="config-textarea" id="cfg-system" placeholder="You are a helpful assistant…"></textarea></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- API -->
+<!-- API page -->
 <div class="page" id="page-api">
-  <div class="page-header"><div class="page-title">API</div><div class="page-sub">OpenAI-compatible — works with any client that supports it</div></div>
+  <div class="page-header"><div class="page-title">API</div><div class="page-sub">OpenAI-compatible — works with any client</div></div>
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">Base URL</div>
     <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
@@ -428,21 +414,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">Endpoints</div>
     <div style="padding:14px 16px"><div class="api-box">
-      <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Chat — streams SSE</span></div>
+      <div class="api-row"><span class="api-method">POST</span><span class="api-path">/v1/chat/completions</span><span class="api-desc">Streaming inference</span></div>
       <div class="api-row"><span class="api-method">GET</span><span class="api-path">/v1/models</span><span class="api-desc">List models</span></div>
       <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/cluster</span><span class="api-desc">Cluster status</span></div>
-      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/hardware</span><span class="api-desc">Node hardware</span></div>
-      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer plan</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/stats</span><span class="api-desc">Live CPU/GPU stats</span></div>
+      <div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/plan/{model}</span><span class="api-desc">Layer distribution</span></div>
       <div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/cluster</span><span class="api-desc">Live updates</span></div>
     </div></div>
   </div>
   <div class="card"><div class="card-header">Example — Python</div><div style="padding:14px 16px"><div class="code-block" id="api-code-example"></div></div></div>
 </div>
 
-<!-- Setup -->
+<!-- Setup page -->
 <div class="page" id="page-install">
-  <div class="page-header"><div class="page-title">Setup</div><div class="page-sub">Install HiveLink on every machine you want in the cluster</div></div>
-  <div class="card" style="margin-bottom:16px">
+  <div class="page-header"><div class="page-title">Setup</div><div class="page-sub">Install HiveLink on every machine in the cluster</div></div>
+  <div class="card">
     <div class="card-header">Installation</div>
     <div style="padding:20px 24px">
       <div class="install-step"><div class="step-num">1</div><div class="step-title">Install Python 3.11+</div><div class="step-desc">Required on every node.</div><div class="code-block"><span class="cmd">python3 --version</span>  <span class="comment"># must be ≥ 3.11</span></div></div>
@@ -450,17 +436,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <div class="code-block"><span class="cmd">pip install hivelink</span>
 <span class="comment"># NVIDIA GPU:</span>  <span class="cmd">pip install</span> <span class="flag">"hivelink[nvidia]"</span>
 <span class="comment"># AMD GPU:</span>    <span class="cmd">pip install</span> <span class="flag">"hivelink[amd]"</span></div></div>
-      <div class="install-step"><div class="step-num">3</div><div class="step-title">Start on every machine</div><div class="step-desc">Nodes discover each other automatically. No config needed.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
-      <div class="install-step"><div class="step-num">4</div><div class="step-title">Start Ollama or llama-server</div><div class="step-desc">HiveLink routes chat requests to your local inference engine.</div>
-<div class="code-block"><span class="comment"># Ollama (easiest)</span>
-<span class="cmd">ollama run llama3.2</span>
-
-<span class="comment"># llama-server direct</span>
-<span class="cmd">llama-server</span> <span class="flag">--model</span> path/to/model.gguf <span class="flag">--port</span> 8080
-
-<span class="comment"># Set backend port (Ollama=11434, llama-server=8080)</span>
-<span class="cmd">set LLAMA_CPP_PORT=11434</span>   <span class="comment"># Windows</span>
-<span class="cmd">export LLAMA_CPP_PORT=11434</span> <span class="comment"># Mac/Linux</span></div></div>
+      <div class="install-step"><div class="step-num">3</div><div class="step-title">Start on every machine</div><div class="step-desc">Nodes discover each other automatically.</div><div class="code-block"><span class="cmd">hivelink start</span></div></div>
+      <div class="install-step"><div class="step-num">4</div><div class="step-title">Start Ollama or llama-server</div><div class="step-desc">HiveLink auto-detects whichever is running.</div>
+<div class="code-block"><span class="cmd">ollama run llama3.2</span>     <span class="comment"># Ollama (port 11434)</span>
+<span class="cmd">llama-server</span> <span class="flag">--model</span> model.gguf  <span class="comment"># llama-server (port 8080)</span></div></div>
     </div>
   </div>
 </div>
@@ -484,23 +463,23 @@ response = client.chat.completions.create(
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let peers=[], models=[], ws=null, selectedModel=null;
-let nodeStats={}; // node_id -> stats object
-let chatHistory=[], chatStreaming=false;
-let activeConvId=null;
+let nodeStats={};
+let chatHistory=[], chatStreaming=false, activeConvId=null;
 const COLORS=['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
+const CONV_KEY='hivelink_conversations';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-let cfg = { temperature:0.7, max_tokens:2048, top_p:1.0, system:'' };
-function updateConfig() {
-  cfg.temperature = parseFloat(document.getElementById('cfg-temp').value);
-  cfg.max_tokens  = parseInt(document.getElementById('cfg-tokens').value);
-  cfg.top_p       = parseFloat(document.getElementById('cfg-topp').value);
-  cfg.system      = document.getElementById('cfg-system').value;
-  document.getElementById('cfg-temp-val').textContent   = cfg.temperature.toFixed(2);
-  document.getElementById('cfg-tokens-val').textContent = cfg.max_tokens;
-  document.getElementById('cfg-topp-val').textContent   = cfg.top_p.toFixed(2);
+let cfg={temperature:0.7,max_tokens:2048,top_p:1.0,system:''};
+function updateConfig(){
+  cfg.temperature=parseFloat(document.getElementById('cfg-temp').value);
+  cfg.max_tokens=parseInt(document.getElementById('cfg-tokens').value);
+  cfg.top_p=parseFloat(document.getElementById('cfg-topp').value);
+  cfg.system=document.getElementById('cfg-system').value;
+  document.getElementById('cfg-temp-val').textContent=cfg.temperature.toFixed(2);
+  document.getElementById('cfg-tokens-val').textContent=cfg.max_tokens;
+  document.getElementById('cfg-topp-val').textContent=cfg.top_p.toFixed(2);
 }
-function resetConfig() {
+function resetConfig(){
   cfg={temperature:0.7,max_tokens:2048,top_p:1.0,system:''};
   document.getElementById('cfg-temp').value='0.7';
   document.getElementById('cfg-tokens').value='2048';
@@ -509,131 +488,35 @@ function resetConfig() {
   updateConfig();
 }
 
-// ── Conversation history (localStorage) ──────────────────────────────────────
-const CONV_KEY = 'hivelink_conversations';
-
-function loadConversations() {
-  try { return JSON.parse(localStorage.getItem(CONV_KEY)||'[]'); } catch(_){ return []; }
-}
-function saveConversations(convs) {
-  localStorage.setItem(CONV_KEY, JSON.stringify(convs));
-}
-function getConversation(id) {
-  return loadConversations().find(c=>c.id===id)||null;
-}
-
-function renderConvList() {
-  const convs = loadConversations();
-  const list  = document.getElementById('conv-list');
-  if (!convs.length) {
-    list.innerHTML = `<div style="padding:8px 16px;font-size:11px;color:var(--muted2)">No conversations yet</div>`;
-    return;
-  }
-  list.innerHTML = convs.slice().reverse().map(c => {
-    const active = c.id===activeConvId ? ' active-conv' : '';
-    const time   = new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-    const preview= c.messages.find(m=>m.role==='user')?.content?.slice(0,32)||'Empty';
-    return `<div class="conv-item${active}" onclick="loadConversation('${c.id}')">
-      <i class="fa-regular fa-comment" style="font-size:11px;flex-shrink:0;color:var(--muted2)"></i>
-      <span class="conv-item-text" title="${preview}">${preview}</span>
-      <span class="conv-item-time">${time}</span>
-      <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')" title="Delete">✕</span>
-    </div>`;
-  }).join('');
-}
-
-function newConversation() {
-  activeConvId = null;
-  chatHistory  = [];
-  clearChatUI();
-  document.querySelectorAll('.conv-item').forEach(el=>el.classList.remove('active-conv'));
-  // Switch to chat page
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelector('[data-page="chat"]').classList.add('active');
-  document.getElementById('page-chat').classList.add('active');
-}
-
-function loadConversation(id) {
-  const conv = getConversation(id);
-  if (!conv) return;
-  activeConvId = id;
-  chatHistory  = [...conv.messages];
-  clearChatUI();
-  // Replay messages
-  const msgs = document.getElementById('chat-messages');
-  chatHistory.forEach(m => {
-    const div = document.createElement('div');
-    div.className = `chat-bubble ${m.role}`;
-    div.innerHTML = m.role==='user' ? escapeHtml(m.content) : formatMessage(m.content);
-    msgs.appendChild(div);
-  });
-  msgs.scrollTop = msgs.scrollHeight;
-  renderConvList();
-  // Switch to chat
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelector('[data-page="chat"]').classList.add('active');
-  document.getElementById('page-chat').classList.add('active');
-}
-
-function saveCurrentConversation() {
-  if (!chatHistory.length) return;
-  const convs = loadConversations();
-  if (activeConvId) {
-    const idx = convs.findIndex(c=>c.id===activeConvId);
-    if (idx>=0) { convs[idx].messages=chatHistory; convs[idx].updatedAt=Date.now(); }
-    else activeConvId=null;
-  }
-  if (!activeConvId) {
-    activeConvId = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    convs.push({ id:activeConvId, messages:chatHistory, createdAt:Date.now(), updatedAt:Date.now() });
-  }
-  saveConversations(convs);
-  renderConvList();
-}
-
-function deleteConversation(id) {
-  const convs = loadConversations().filter(c=>c.id!==id);
-  saveConversations(convs);
-  if (activeConvId===id) { activeConvId=null; chatHistory=[]; clearChatUI(); }
-  renderConvList();
-}
-
-function clearAllConversations() {
-  if (!confirm('Clear all conversation history?')) return;
-  localStorage.removeItem(CONV_KEY);
-  activeConvId=null; chatHistory=[]; clearChatUI();
-  renderConvList();
-}
-
 // ── Nav ───────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click',()=>{
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     item.classList.add('active');
     document.getElementById('page-'+item.dataset.page).classList.add('active');
+    if(item.dataset.page==='cluster') setTimeout(renderClusterViz,50);
   });
 });
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
-function connect() {
-  ws = new WebSocket(`${WS_BASE}/ws/cluster`);
-  ws.onopen  = ()=>setConn('live','live');
-  ws.onclose = ()=>{setConn('error','offline');setTimeout(connect,3000)};
-  ws.onerror = ()=>setConn('error','error');
-  ws.onmessage = e => {
-    try {
+function connect(){
+  ws=new WebSocket(`${WS_BASE}/ws/cluster`);
+  ws.onopen=()=>setConn('live','live');
+  ws.onclose=()=>{setConn('error','offline');setTimeout(connect,3000)};
+  ws.onerror=()=>setConn('error','error');
+  ws.onmessage=e=>{
+    try{
       const msg=JSON.parse(e.data);
       if(msg.type==='cluster_update'){
         peers=msg.peers||[];
-        renderNodeCards();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();
+        renderClusterViz();renderNodeTable();renderHardware();
+        updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();
       }
       if(msg.type==='stats_update'){
         nodeStats[msg.node_id]=msg.stats;
         updateExoNodeStats(msg.node_id,msg.stats);
-        updateNodeCardStats(msg.node_id,msg.stats);
+        renderMiniCluster();
       }
     }catch(_){}
   };
@@ -643,345 +526,306 @@ function setConn(cls,label){
   document.getElementById('conn-label').textContent=label;
 }
 
-// ── Brand icons — using cdn.simpleicons.org for real logos ────────────────────
-// Usage: <img src="https://cdn.simpleicons.org/[slug]/[hex]" width="13" height="13">
-const SI = 'https://cdn.simpleicons.org';
-
-function siImg(slug, color, size=13){
+// ── Brand icons ───────────────────────────────────────────────────────────────
+const SI='https://cdn.simpleicons.org';
+function siImg(slug,color,size=13){
   return `<img src="${SI}/${slug}/${color}" width="${size}" height="${size}" style="display:inline-block;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'">`;
 }
-
 function osIcon(os){
-  const map = {
-    darwin:  siImg('apple','a8b3c4',16),
-    windows: '<i class="fa-brands fa-windows" style="color:#00adef;font-size:16px"></i>',
-    linux:   siImg('linux','f5a623',16),
+  const map={
+    darwin:siImg('apple','a8b3c4',14),
+    windows:'<i class="fa-brands fa-windows" style="color:#00adef;font-size:14px"></i>',
+    linux:siImg('linux','f5a623',14),
   };
-  return map[os] || '<i class="fa-solid fa-microchip"></i>';
+  return map[os]||'<i class="fa-solid fa-microchip"></i>';
 }
-
 function gpuBrandHtml(name){
-  if(!name) return '';
-  const n = name.toLowerCase();
-  if(n.includes('nvidia')||n.includes('geforce')||n.includes('rtx')||n.includes('gtx')||n.includes('a100')||n.includes('h100')||n.includes('l40'))
-    return siImg('nvidia','76b900');
-  if(n.includes('amd')||n.includes('radeon')||n.includes('rx '))
-    return siImg('amd','e8534f');
-  if(n.includes('apple')||n.includes(' m1')||n.includes(' m2')||n.includes(' m3')||n.includes(' m4'))
-    return siImg('apple','a8b3c4');
-  if(n.includes('intel')||n.includes('arc')||n.includes('iris')||n.includes('xe'))
-    return siImg('intel','0071c5');
-  if(n.includes('tenstorrent'))
-    return `<span style="font-size:9px;font-weight:700;color:#ff6b35;font-family:var(--mono);flex-shrink:0">TT</span>`;
-  if(n.includes('qualcomm')||n.includes('snapdragon')||n.includes('adreno'))
-    return siImg('qualcomm','3253DC');
-  return '';
+  if(!name)return'';const n=name.toLowerCase();
+  if(n.includes('nvidia')||n.includes('geforce')||n.includes('rtx')||n.includes('gtx')||n.includes('a100')||n.includes('h100'))return siImg('nvidia','76b900');
+  if(n.includes('amd')||n.includes('radeon')||n.includes('rx '))return siImg('amd','e8534f');
+  if(n.includes('apple')||n.includes(' m1')||n.includes(' m2')||n.includes(' m3')||n.includes(' m4'))return siImg('apple','a8b3c4');
+  if(n.includes('intel')||n.includes('arc')||n.includes('iris')||n.includes('intel64')||n.includes('genuineintel'))return siImg('intel','0071c5');
+  return'';
 }
-
 function cpuBrandHtml(name){
-  if(!name) return '<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
-  const n = name.toLowerCase();
-  if(n.includes('intel')||n.includes('genuineintel')||n.includes('intel64'))  return siImg('intel','0071c5',14);
-  if(n.includes('amd')||n.includes('ryzen')||n.includes('epyc')||n.includes('threadripper')) return siImg('amd','e8534f',14);
-  if(n.includes('apple')||n.includes('arm'))           return siImg('apple','a8b3c4',14);
-  if(n.includes('qualcomm')||n.includes('snapdragon')) return siImg('qualcomm','3253DC',14);
-  return '<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
+  if(!name)return'<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
+  const n=name.toLowerCase();
+  if(n.includes('intel')||n.includes('genuineintel')||n.includes('intel64'))return siImg('intel','0071c5',14);
+  if(n.includes('amd')||n.includes('ryzen')||n.includes('epyc'))return siImg('amd','e8534f',14);
+  if(n.includes('apple')||n.includes('arm'))return siImg('apple','a8b3c4',14);
+  return'<i class="fa-solid fa-microchip" style="color:var(--muted)"></i>';
 }
-// Backend → provider logo (no badge box, just the brand icon)
-function backendProviderIcon(backend) {
-  switch(backend) {
-    case 'cuda':   return siImg('nvidia','76b900',18);
-    case 'metal':  return siImg('apple','a8b3c4',18);
-    case 'rocm':   return siImg('amd','e8534f',18);
-    case 'vulkan': return '<i class="fa-brands fa-vulkan" style="color:var(--purple);font-size:16px"></i>';
-    default:       return siImg('intel','0071c5',18);
+function backendProviderIcon(backend){
+  switch(backend){
+    case'cuda':return siImg('nvidia','76b900',18);
+    case'metal':return siImg('apple','a8b3c4',18);
+    case'rocm':return siImg('amd','e8534f',18);
+    default:return siImg('intel','0071c5',18);
   }
 }
-
-// ── Model logos — real brand icons via simpleicons ────────────────────────────
-// Llama = Meta, Gemma = Google, others have their own slugs
 const MODEL_META={
-  llama:    { bg:'#0064e0', icon: siImg('meta','ffffff',13),          label:'Meta'     },
-      qwen:     { bg:'#6950EF', icon: siImg('qwen','ffffff',13),           label:'Qwen'     },
-  mistral:  { bg:'#FF7000', icon: siImg('mistralai','ffffff',13),     label:'Mistral'  },
-  mixtral:  { bg:'#FF7000', icon: siImg('mistralai','ffffff',13),     label:'Mistral'  },
-  deepseek: { bg:'#4D6BFE', icon: siImg('deepseek','ffffff',13),      label:'DeepSeek' },
-  gemma:    { bg:'#8E75B2', icon: siImg('googlegemini','ffffff',13),  label:'Google'   },
-  phi:      { bg:'#0078d4', icon: siImg('microsoft','ffffff',13),     label:'Microsoft'},
-  command:  { bg:'#D18EE2', icon: `<span style="color:#fff;font-size:9px;font-weight:700">C+</span>`, label:'Cohere' },
-  default:  { bg:'#30363d', icon: '<i class="fa-solid fa-cube" style="color:#7d8590;font-size:10px"></i>', label:'' },
+  llama:{bg:'#0064e0',icon:siImg('meta','ffffff',13)},
+  qwen:{bg:'#6950EF',icon:siImg('qwen','ffffff',13)},
+  mistral:{bg:'#FF7000',icon:siImg('mistralai','ffffff',13)},
+  mixtral:{bg:'#FF7000',icon:siImg('mistralai','ffffff',13)},
+  deepseek:{bg:'#4D6BFE',icon:siImg('deepseek','ffffff',13)},
+  gemma:{bg:'#8E75B2',icon:siImg('googlegemini','ffffff',13)},
+  phi:{bg:'#0078d4',icon:siImg('microsoft','ffffff',13)},
+  default:{bg:'#30363d',icon:'<i class="fa-solid fa-cube" style="color:#7d8590;font-size:10px"></i>'},
 };
 function modelMeta(id){
-  const k = id.toLowerCase();
-  for(const[key,val] of Object.entries(MODEL_META)){
-    if(key!=='default' && k.includes(key)) return val;
-  }
+  const k=id.toLowerCase();
+  for(const[key,val]of Object.entries(MODEL_META)){if(key!=='default'&&k.includes(key))return val;}
   return MODEL_META.default;
 }
+function engineLabel(e){return{ollama:'Ollama',mlx:'MLX',vllm:'vLLM','llama-server':'llama.cpp',none:'—'}[e]||e||'—'}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtMem=mb=>!mb?'0':mb>=1024?(mb/1024).toFixed(1)+' GB':mb+' MB';
 const backBadge=b=>`<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
 
-// ── Live stats update — patches node cards in place ──────────────────────────
-function engineLabel(engine){
-  const labels = {
-    'ollama':'Ollama', 'mlx':'MLX', 'vllm':'vLLM',
-    'llama-server':'llama-server', 'none':'no engine'
-  };
-  return labels[engine]||engine||'—';
-}
+// ── EXO Cluster Viz ───────────────────────────────────────────────────────────
+const BOX_W=168, BOX_H=130, BOX_PAD=32;
 
-function updateNodeCardStats(nodeId, stats){
-  if(!stats) return;
-  // Find card by node_id data attribute
-  const card = document.querySelector(`[data-node-id="${nodeId}"]`);
-  if(!card) return;
-
-  // GPU utilization bar
-  const gpuUtil = stats.gpus&&stats.gpus.length ? stats.gpus[0].util_pct : null;
-  const temp    = stats.gpus&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
-  const power   = stats.gpus&&stats.gpus.length ? stats.gpus[0].power_w  : null;
-
-  // CPU bar
-  const cpuBar = card.querySelector('.stat-cpu-fill');
-  if(cpuBar) cpuBar.style.width = stats.cpu_pct+'%';
-  const cpuVal = card.querySelector('.stat-cpu-val');
-  if(cpuVal) cpuVal.textContent = stats.cpu_pct.toFixed(0)+'%';
-
-  // GPU util bar
-  const gpuBar = card.querySelector('.stat-gpu-fill');
-  if(gpuBar && gpuUtil!==null) gpuBar.style.width = gpuUtil+'%';
-  const gpuVal = card.querySelector('.stat-gpu-val');
-  if(gpuVal && gpuUtil!==null) gpuVal.textContent = gpuUtil.toFixed(0)+'%';
-
-  // Temp
-  const tempEl = card.querySelector('.stat-temp');
-  if(tempEl && temp!==null) tempEl.textContent = temp.toFixed(0)+'°C';
-
-  // Power
-  const powerEl = card.querySelector('.stat-power');
-  if(powerEl && power!==null) powerEl.textContent = power.toFixed(0)+'W';
-
-  // Engine pill
-  const engineEl = card.querySelector('.node-engine-pill');
-  if(engineEl && stats.engine){
-    engineEl.textContent = engineLabel(stats.engine);
-    engineEl.className   = 'node-engine-pill '+stats.engine;
-  }
-
-  // Pulse if GPU active
-  if(gpuUtil!==null && gpuUtil>5){
-    card.classList.add('node-active-pulse');
-  } else {
-    card.classList.remove('node-active-pulse');
-  }
-}
-
-// ── EXO-style cluster viz ─────────────────────────────────────────────────────
-// Positions: diamond for 2, triangle for 3, square for 4, etc.
-function getNodePositions(n, w, h) {
-  const cx = w/2, cy = h/2;
-  const rx = Math.min(cx*0.72, 220), ry = Math.min(cy*0.72, 130);
-  if(n===1) return[[cx,cy]];
-  if(n===2) return[[cx-rx,cy],[cx+rx,cy]];
-  if(n===3) return[[cx,cy-ry],[cx-rx,cy+ry*0.5],[cx+rx,cy+ry*0.5]];
+function getVizPositions(n,cw,ch){
+  const cx=cw/2, cy=ch/2;
+  const rx=Math.min(cx-BOX_W/2-BOX_PAD, 260);
+  const ry=Math.min(cy-BOX_H/2-BOX_PAD, 115);
+  if(n===1)return[[cx,cy]];
+  if(n===2)return[[cx-rx,cy],[cx+rx,cy]];
+  if(n===3)return[[cx,cy-ry],[cx-rx,cy+ry*.65],[cx+rx,cy+ry*.65]];
   const pts=[];
-  for(let i=0;i<n;i++){
-    const a=(i/n)*Math.PI*2-Math.PI/2;
-    pts.push([cx+Math.cos(a)*rx, cy+Math.sin(a)*ry]);
-  }
+  for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2-Math.PI/2;pts.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]);}
   return pts;
 }
 
-function renderClusterViz() {
-  const wrap  = document.getElementById('cluster-node-boxes');
-  const empty = document.getElementById('cluster-empty-msg');
-  if(!wrap) return;
+// Clip line from center to box edge
+function clipToBox(sx,sy,tx,ty){
+  const dx=tx-sx, dy=ty-sy;
+  const angle=Math.atan2(dy,dx);
+  const hw=BOX_W/2, hh=BOX_H/2;
+  // How far to travel in x vs y to hit the box edge
+  const tx2=hw/Math.abs(Math.cos(angle)||0.0001);
+  const ty2=hh/Math.abs(Math.sin(angle)||0.0001);
+  const t=Math.min(tx2,ty2)+2; // +2px gap
+  return[sx+Math.cos(angle)*t, sy+Math.sin(angle)*t];
+}
+
+function renderClusterViz(){
+  const wrap=document.getElementById('cluster-node-boxes');
+  const emptyEl=document.getElementById('cluster-empty-msg');
+  if(!wrap)return;
 
   if(!peers.length){
-    wrap.style.display='none';
-    empty.style.display='flex';
-    drawArrows([]);
+    wrap.innerHTML='';
+    wrap.style.minHeight='300px';
+    emptyEl.style.display='block';
+    drawClusterArrows([]);
     return;
   }
-  wrap.style.display='block';
-  empty.style.display='none';
+  emptyEl.style.display='none';
 
-  const W = wrap.offsetWidth  || 700;
-  const H = 280;
-  wrap.style.height = H+'px';
+  const n=peers.length;
+  const VH=n<=2?300:n<=4?360:420;
+  wrap.style.minHeight=VH+'px';
+  const cw=wrap.offsetWidth;
+  if(!cw){requestAnimationFrame(renderClusterViz);return;}
 
-  const sorted = [...peers].sort((a,b)=>{
-    if(a.is_self&&!b.is_self)return-1;
-    if(!a.is_self&&b.is_self)return 1;
+  const sorted=[...peers].sort((a,b)=>{
+    if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;
     return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
   });
-  const positions = getNodePositions(sorted.length, W, H);
-  const BOX_W=160, BOX_H=130;
-
-  // Remove old boxes
+  const positions=getVizPositions(sorted.length,cw,VH);
   wrap.querySelectorAll('.exo-node').forEach(el=>el.remove());
 
-  const boxCenters = [];
+  const centers=[];
   sorted.forEach((p,i)=>{
-    const hw      = p.hardware||{};
-    const [px,py] = positions[i];
-    const left    = Math.round(px - BOX_W/2);
-    const top     = Math.round(py - BOX_H/2);
-    const color   = COLORS[i%COLORS.length];
-    const backend = hw.primary_backend||'cpu';
-    const stats   = nodeStats[p.node_id];
-    const gpuUtil = stats&&stats.gpus.length ? stats.gpus[0].util_pct : null;
-    const temp    = stats&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
-    const power   = stats&&stats.gpus.length ? stats.gpus[0].power_w  : null;
-    const cpuPct  = stats ? stats.cpu_pct : null;
-    const eng     = stats ? stats.engine  : null;
-    const mem     = hw.total_vram_mb||hw.ram_mb||0;
-    const osName  = {darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||'Node';
-    const firstGpu= (hw.gpus||[])[0]?.name||'';
-    const selfBadge = p.is_self ? '<span class="node-card-self">this node</span>' : '';
-    const isActive  = gpuUtil!==null && gpuUtil>5;
+    const hw=p.hardware||{};
+    const [cx,cy]=positions[i];
+    const left=Math.round(cx-BOX_W/2);
+    const top=Math.round(cy-BOX_H/2);
+    const color=COLORS[i%COLORS.length];
+    const backend=hw.primary_backend||'cpu';
+    const st=nodeStats[p.node_id];
+    const gpuUtil=st&&st.gpus.length?st.gpus[0].util_pct:null;
+    const temp=st&&st.gpus.length?st.gpus[0].temp_c:null;
+    const power=st&&st.gpus.length?st.gpus[0].power_w:null;
+    const cpuPct=st?st.cpu_pct:null;
+    const eng=st?st.engine:null;
+    const mem=hw.total_vram_mb||hw.ram_mb||0;
+    const osName={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||'Node';
+    const firstGpu=(hw.gpus||[])[0]?.name||'';
+    const isActive=gpuUtil!==null&&gpuUtil>5;
 
-    const box = document.createElement('div');
-    box.className  = 'exo-node'+(isActive?' active-inference':'');
-    box.style.cssText = `left:${left}px;top:${top}px;border-top:2px solid ${color}`;
-    box.dataset.nodeId = p.node_id;
-    box.innerHTML = `
+    const box=document.createElement('div');
+    box.className='exo-node'+(isActive?' active-inference':'');
+    box.style.cssText=`left:${left}px;top:${top}px;width:${BOX_W}px;border-top:2px solid ${color}`;
+    box.dataset.nodeId=p.node_id;
+    box.innerHTML=`
       <div class="exo-node-header">
-        <div class="exo-node-name">${osIcon(hw.node_os)}<span>${osName}</span>${selfBadge}</div>
+        <div class="exo-node-name">${osIcon(hw.node_os)}<span>${osName}</span>${p.is_self?'<span class="node-card-self">this</span>':''}</div>
         ${backBadge(backend)}
       </div>
       <div class="exo-node-body">
-        ${gpuUtil!==null?`
-        <div class="exo-util-row">
+        ${gpuUtil!==null?`<div class="exo-util-row">
           <span class="exo-util-label">GPU</span>
           <div class="exo-bar-wrap"><div class="exo-bar-fill" style="width:${gpuUtil}%;background:#76b900"></div></div>
           <span class="exo-util-val">${gpuUtil.toFixed(0)}%</span>
+          ${temp!==null?`<span class="exo-stat-badge exo-temp">${temp.toFixed(0)}°</span>`:''}
+          ${power!==null?`<span class="exo-stat-badge exo-power">${power.toFixed(0)}W</span>`:''}
         </div>`:''}
-        ${cpuPct!==null?`
         <div class="exo-util-row">
           <span class="exo-util-label">CPU</span>
-          <div class="exo-bar-wrap"><div class="exo-bar-fill" style="width:${cpuPct}%;background:${color}"></div></div>
-          <span class="exo-util-val">${cpuPct.toFixed(0)}%</span>
-        </div>`:''}
-        <div class="exo-util-row" style="margin-top:1px">
-          <span class="exo-mem-text">${fmtMem(mem)}</span>
-          <div class="exo-badges">
-            ${temp!==null?`<span class="exo-stat-pill exo-temp">${temp.toFixed(0)}°C</span>`:''}
-            ${power!==null?`<span class="exo-stat-pill exo-power">${power.toFixed(0)}W</span>`:''}
-            ${eng&&eng!=='none'?`<span class="node-engine-pill ${eng}">${engineLabel(eng)}</span>`:''}
-          </div>
+          <div class="exo-bar-wrap"><div class="exo-bar-fill" style="width:${cpuPct!==null?cpuPct:0}%;background:${color}"></div></div>
+          <span class="exo-util-val">${cpuPct!==null?cpuPct.toFixed(0)+'%':'—'}</span>
         </div>
-        <div style="font-size:9px;color:var(--muted2);font-family:var(--mono);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${firstGpu||hw.cpu_name||'—'}</div>
+      </div>
+      <div class="exo-footer">
+        <span class="exo-mem">${fmtMem(mem)}</span>
+        ${eng&&eng!=='none'?`<span class="node-engine-pill ${eng}">${engineLabel(eng)}</span>`:'<span class="exo-mem">${firstGpu||hw.cpu_name||''}</span>'}
       </div>`;
     wrap.appendChild(box);
-    boxCenters.push({x:px, y:py, color});
+    centers.push({x:cx,y:cy,color});
   });
 
-  // Draw arrows after boxes are placed
-  requestAnimationFrame(()=>drawArrows(boxCenters));
+  // Sync canvas and draw
+  const canvas=document.getElementById('cluster-arrows');
+  canvas.width=cw; canvas.height=VH;
+  canvas.style.width=cw+'px'; canvas.style.height=VH+'px';
+  drawClusterArrows(centers);
 }
 
-function drawArrows(centers) {
-  const canvas = document.getElementById('cluster-arrows');
-  if(!canvas) return;
-  const wrap = document.getElementById('cluster-viz-wrap');
-  canvas.width  = wrap.offsetWidth;
-  canvas.height = wrap.offsetHeight;
-  const ctx = canvas.getContext('2d');
+function drawClusterArrows(centers){
+  const canvas=document.getElementById('cluster-arrows');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(centers.length<2) return;
+  if(centers.length<2)return;
 
-  // Offset for the 24px padding on the viz wrap
-  const PAD = 24;
-
-  // Draw dashed arrows between every pair of nodes (like EXO)
   for(let i=0;i<centers.length;i++){
     for(let j=i+1;j<centers.length;j++){
-      const a = centers[i], b = centers[j];
-      const ax = a.x+PAD, ay = a.y+PAD;
-      const bx = b.x+PAD, by = b.y+PAD;
-      const midX=(ax+bx)/2, midY=(ay+by)/2;
+      const a=centers[i], b=centers[j];
+      // Clip start and end to box edges
+      const [ax,ay]=clipToBox(a.x,a.y,b.x,b.y);
+      const [bx,by]=clipToBox(b.x,b.y,a.x,a.y);
 
-      // Line
+      // Dashed line
       ctx.beginPath();
-      ctx.setLineDash([4,4]);
+      ctx.setLineDash([5,5]);
       ctx.strokeStyle='#30363d';
-      ctx.lineWidth=1;
+      ctx.lineWidth=1.5;
       ctx.moveTo(ax,ay);
       ctx.lineTo(bx,by);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Arrow at midpoint pointing both ways
-      const angle = Math.atan2(by-ay,bx-ax);
-      _arrowHead(ctx,midX,midY,angle,     '#484f58');
-      _arrowHead(ctx,midX,midY,angle+Math.PI,'#484f58');
+      // Arrow heads pointing toward each box
+      const angle=Math.atan2(by-ay,bx-ax);
+      arrowHead(ctx,ax,ay,angle+Math.PI,'#555e6a'); // at start, pointing back
+      arrowHead(ctx,bx,by,angle,'#555e6a');          // at end, pointing forward
     }
   }
 }
 
-function _arrowHead(ctx,x,y,angle,color){
-  const size=5;
+function arrowHead(ctx,x,y,angle,color){
+  const s=7;
   ctx.beginPath();
   ctx.fillStyle=color;
-  ctx.moveTo(x+Math.cos(angle)*size,      y+Math.sin(angle)*size);
-  ctx.lineTo(x+Math.cos(angle-2.4)*size*0.7, y+Math.sin(angle-2.4)*size*0.7);
-  ctx.lineTo(x+Math.cos(angle+2.4)*size*0.7, y+Math.sin(angle+2.4)*size*0.7);
+  ctx.moveTo(x+Math.cos(angle)*s,y+Math.sin(angle)*s);
+  ctx.lineTo(x+Math.cos(angle-2.4)*s*.55,y+Math.sin(angle-2.4)*s*.55);
+  ctx.lineTo(x+Math.cos(angle+2.4)*s*.55,y+Math.sin(angle+2.4)*s*.55);
   ctx.closePath();
   ctx.fill();
 }
 
-// Patch live stats into existing EXO node boxes
-function updateExoNodeStats(nodeId, stats){
-  const box = document.querySelector(`.exo-node[data-node-id="${nodeId}"]`);
-  if(!box) return;
-  const gpuUtil = stats.gpus&&stats.gpus.length ? stats.gpus[0].util_pct : null;
-  const temp    = stats.gpus&&stats.gpus.length ? stats.gpus[0].temp_c   : null;
-  const power   = stats.gpus&&stats.gpus.length ? stats.gpus[0].power_w  : null;
-  const cpuPct  = stats.cpu_pct;
-
-  const gpuBar = box.querySelector('.exo-bar-fill');
-  if(gpuBar&&gpuUtil!==null) gpuBar.style.width=gpuUtil+'%';
-  const gpuVal = box.querySelector('.exo-util-val');
-  if(gpuVal&&gpuUtil!==null) gpuVal.textContent=gpuUtil.toFixed(0)+'%';
-
-  // CPU bar (second bar)
-  const bars = box.querySelectorAll('.exo-bar-fill');
-  if(bars.length>1&&cpuPct!==null) bars[1].style.width=cpuPct+'%';
-  const vals = box.querySelectorAll('.exo-util-val');
-  if(vals.length>1&&cpuPct!==null) vals[1].textContent=cpuPct.toFixed(0)+'%';
-
-  const tempEl  = box.querySelector('.exo-temp');
-  if(tempEl&&temp!==null) tempEl.textContent=temp.toFixed(0)+'°C';
-  const powerEl = box.querySelector('.exo-power');
-  if(powerEl&&power!==null) powerEl.textContent=power.toFixed(0)+'W';
-
-  const engEl = box.querySelector('.node-engine-pill');
-  if(engEl&&stats.engine&&stats.engine!=='none'){
-    engEl.textContent=engineLabel(stats.engine);
-    engEl.className='node-engine-pill '+stats.engine;
-  }
-
-  // Pulse when GPU active
-  if(gpuUtil!==null&&gpuUtil>5) box.classList.add('active-inference');
+function updateExoNodeStats(nodeId,stats){
+  const box=document.querySelector(`.exo-node[data-node-id="${nodeId}"]`);
+  if(!box)return;
+  const fills=box.querySelectorAll('.exo-bar-fill');
+  const vals=box.querySelectorAll('.exo-util-val');
+  const gpuUtil=stats.gpus&&stats.gpus.length?stats.gpus[0].util_pct:null;
+  const temp=stats.gpus&&stats.gpus.length?stats.gpus[0].temp_c:null;
+  const power=stats.gpus&&stats.gpus.length?stats.gpus[0].power_w:null;
+  // GPU bar (first), CPU bar (second — or first if no GPU)
+  const gpuFill=fills[0], cpuFill=fills[gpuUtil!==null?1:0];
+  const gpuVal=vals[0], cpuVal=vals[gpuUtil!==null?1:0];
+  if(gpuFill&&gpuUtil!==null)gpuFill.style.width=gpuUtil+'%';
+  if(gpuVal&&gpuUtil!==null)gpuVal.textContent=gpuUtil.toFixed(0)+'%';
+  if(cpuFill&&stats.cpu_pct!==null)cpuFill.style.width=stats.cpu_pct+'%';
+  if(cpuVal&&stats.cpu_pct!==null)cpuVal.textContent=stats.cpu_pct.toFixed(0)+'%';
+  const tempEl=box.querySelector('.exo-temp');
+  if(tempEl&&temp!==null)tempEl.textContent=temp.toFixed(0)+'°';
+  const powerEl=box.querySelector('.exo-power');
+  if(powerEl&&power!==null)powerEl.textContent=power.toFixed(0)+'W';
+  const engEl=box.querySelector('.node-engine-pill');
+  if(engEl&&stats.engine&&stats.engine!=='none'){engEl.textContent=engineLabel(stats.engine);engEl.className='node-engine-pill '+stats.engine;}
+  if(gpuUtil!==null&&gpuUtil>5)box.classList.add('active-inference');
   else box.classList.remove('active-inference');
 }
 
-function renderNodeCards(){ renderClusterViz(); } // alias for existing calls
+// ── Mini cluster (chat sidebar) ───────────────────────────────────────────────
+function renderMiniCluster(){
+  const body=document.getElementById('mini-cluster-body');
+  const tflopsEl=document.getElementById('mini-cluster-tflops');
+  if(!body)return;
 
-function function renderNodeTable(){
+  const totalTf=peers.reduce((s,p)=>s+(p.hardware?.total_fp16_tflops||0),0);
+  if(tflopsEl)tflopsEl.textContent=totalTf?totalTf.toFixed(0)+' TF':'';
+
+  if(!peers.length){
+    body.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">No nodes connected</div>';
+    return;
+  }
+  const sorted=[...peers].sort((a,b)=>{if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;return 0;});
+  let html='';
+  sorted.forEach((p,i)=>{
+    const hw=p.hardware||{};
+    const st=nodeStats[p.node_id];
+    const gpuUtil=st&&st.gpus.length?st.gpus[0].util_pct:null;
+    const cpuPct=st?st.cpu_pct:null;
+    const temp=st&&st.gpus.length?st.gpus[0].temp_c:null;
+    const color=COLORS[i%COLORS.length];
+    const osName={darwin:'macOS',windows:'Win',linux:'Linux'}[hw.node_os]||'Node';
+    const backend=hw.primary_backend||'cpu';
+
+    if(i>0){
+      html+=`<div class="mini-conn-line">
+        <div class="mini-conn-dash"></div><div class="mini-conn-dash"></div>
+        <span class="mini-conn-arrow">⟺</span>
+        <div class="mini-conn-dash"></div><div class="mini-conn-dash"></div>
+      </div>`;
+    }
+    html+=`<div class="mini-node-row" style="border-left:2px solid ${color}">
+      <div class="mini-node-top">
+        <div class="mini-node-label">${osIcon(hw.node_os)}<span>${osName}${p.is_self?' ·<span style="color:var(--accent);font-size:9px"> this</span>':''}</span></div>
+        <div class="mini-node-stats">
+          ${temp!==null?`<span class="mini-node-stat" style="color:var(--amber)">${temp.toFixed(0)}°</span>`:''}
+          ${backBadge(backend)}
+        </div>
+      </div>
+      ${gpuUtil!==null?`<div class="mini-util-row">
+        <span class="mini-util-label">GPU</span>
+        <div class="mini-util-track"><div class="mini-util-fill" style="width:${gpuUtil}%;background:#76b900"></div></div>
+        <span class="mini-util-val">${gpuUtil.toFixed(0)}%</span>
+      </div>`:''}
+      <div class="mini-util-row">
+        <span class="mini-util-label">CPU</span>
+        <div class="mini-util-track"><div class="mini-util-fill" style="width:${cpuPct!==null?cpuPct:0}%;background:${color}"></div></div>
+        <span class="mini-util-val">${cpuPct!==null?cpuPct.toFixed(0)+'%':'—'}</span>
+      </div>
+    </div>`;
+  });
+  body.innerHTML=html;
+}
+
+// ── Node table ────────────────────────────────────────────────────────────────
+function renderNodeTable(){
   const tbody=document.getElementById('node-tbody');
   if(!peers.length){
-    tbody.innerHTML=`<tr><td colspan="5" style="padding:0"><div class="empty">
-      <div class="empty-title">No nodes</div><div class="empty-sub">Run <code>hivelink start</code> on each machine</div>
-    </div></td></tr>`;return;
+    tbody.innerHTML=`<tr><td colspan="5" style="padding:0"><div class="empty"><div class="empty-title">No nodes</div><div class="empty-sub">Run <code>hivelink start</code> on each machine</div></div></td></tr>`;
+    return;
   }
-  const sorted=[...peers].sort((a,b)=>{
-    if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;
-    return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);
-  });
+  const sorted=[...peers].sort((a,b)=>{if(a.is_self&&!b.is_self)return-1;if(!a.is_self&&b.is_self)return 1;return(b.hardware?.total_fp16_tflops||0)-(a.hardware?.total_fp16_tflops||0);});
   const totalMem=sorted.reduce((s,p)=>s+(p.hardware?.total_vram_mb||p.hardware?.ram_mb||0),0);
   tbody.innerHTML=sorted.map(p=>{
     const hw=p.hardware||{};
@@ -990,20 +834,15 @@ function function renderNodeTable(){
     const firstGpu=(hw.gpus||[])[0]?.name||'';
     const gpus=(hw.gpus||[]).map(g=>g.name).join(', ')||'—';
     const self=p.is_self?'<span class="badge badge-self" style="margin-left:5px">this node</span>':'';
-    return`<tr>
-      <td><div class="node-name-cell">
-        <div class="node-avatar">${osIcon(hw.node_os)}</div>
-        <div>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
-            <span class="node-id-text">${(p.node_id||'').slice(0,12)}…</span>${self}
-          </div>
-          <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div>
-        </div>
-      </div></td>
-      <td>${backBadge(hw.primary_backend||'cpu')}</td>
-      <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
-      <td><span style="font-family:var(--mono);font-size:12px">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
-      <td><div class="gpu-cell">${gpuBrandHtml(firstGpu)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;margin-left:4px">${gpus}</span></div></td>
+    return`<tr><td><div class="node-name-cell">
+      <div class="node-avatar">${osIcon(hw.node_os)}</div>
+      <div><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px"><span class="node-id-text">${(p.node_id||'').slice(0,12)}…</span>${self}</div>
+      <div class="node-hostname">${p.hostname||'—'} · ${hw.cpu_name||'—'}</div></div>
+    </div></td>
+    <td>${backBadge(hw.primary_backend||'cpu')}</td>
+    <td><div class="mem-bar"><div class="mem-track"><div class="mem-fill" style="width:${pct}%"></div></div><span class="mem-text">${fmtMem(mem)}</span></div></td>
+    <td><span style="font-family:var(--mono);font-size:12px">${(hw.total_fp16_tflops||0).toFixed(1)}</span></td>
+    <td><div class="gpu-cell">${gpuBrandHtml(firstGpu)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;margin-left:4px">${gpus}</span></div></td>
     </tr>`;
   }).join('');
 }
@@ -1018,7 +857,7 @@ function renderHardware(){
     const os={darwin:'macOS',windows:'Windows',linux:'Linux'}[hw.node_os]||hw.node_os||'?';
     const color=COLORS[i%COLORS.length];
     const gpus=hw.gpus||[];
-    const self=p.is_self?`<span class="badge badge-self hw-self-badge">this node</span>`:'';
+    const self=p.is_self?`<span class="badge badge-self" style="margin-left:auto">this node</span>`:'';
     const gpuRows=gpus.length?gpus.map(g=>`<div class="hw-gpu-row">
       <div class="hw-gpu-name">${gpuBrandHtml(g.name)}<span style="margin-left:4px">${g.name}</span></div>
       <div class="hw-gpu-specs"><span>${fmtMem(g.vram_mb)} VRAM</span><span>~${g.fp16_tflops} TFLOPS</span>${backBadge(g.backend)}</div>
@@ -1090,6 +929,62 @@ function renderPlan(plan){
   container.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// ── Conversations ─────────────────────────────────────────────────────────────
+function loadConversations(){try{return JSON.parse(localStorage.getItem(CONV_KEY)||'[]');}catch(_){return[];}}
+function saveConversations(c){localStorage.setItem(CONV_KEY,JSON.stringify(c));}
+function renderConvList(){
+  const convs=loadConversations();
+  const list=document.getElementById('conv-list');
+  if(!convs.length){list.innerHTML=`<div style="padding:8px 16px;font-size:11px;color:var(--muted2)">No conversations yet</div>`;return;}
+  list.innerHTML=convs.slice().reverse().map(c=>{
+    const active=c.id===activeConvId?' active-conv':'';
+    const time=new Date(c.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const preview=c.messages.find(m=>m.role==='user')?.content?.slice(0,32)||'Empty';
+    return`<div class="conv-item${active}" onclick="loadConversation('${c.id}')">
+      <i class="fa-regular fa-comment" style="font-size:11px;flex-shrink:0;color:var(--muted2)"></i>
+      <span class="conv-item-text" title="${preview}">${preview}</span>
+      <span class="conv-item-time">${time}</span>
+      <span class="conv-del" onclick="event.stopPropagation();deleteConversation('${c.id}')">✕</span>
+    </div>`;
+  }).join('');
+}
+function newConversation(){
+  activeConvId=null;chatHistory=[];clearChatUI();
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[data-page="chat"]').classList.add('active');
+  document.getElementById('page-chat').classList.add('active');
+}
+function loadConversation(id){
+  const conv=loadConversations().find(c=>c.id===id);if(!conv)return;
+  activeConvId=id;chatHistory=[...conv.messages];clearChatUI();
+  const msgs=document.getElementById('chat-messages');
+  chatHistory.forEach(m=>{
+    const div=document.createElement('div');div.className=`chat-bubble ${m.role}`;
+    div.innerHTML=m.role==='user'?escapeHtml(m.content):formatMessage(m.content);msgs.appendChild(div);
+  });
+  msgs.scrollTop=msgs.scrollHeight;renderConvList();
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[data-page="chat"]').classList.add('active');
+  document.getElementById('page-chat').classList.add('active');
+}
+function saveCurrentConversation(){
+  if(!chatHistory.length)return;
+  const convs=loadConversations();
+  if(activeConvId){const idx=convs.findIndex(c=>c.id===activeConvId);if(idx>=0){convs[idx].messages=chatHistory;convs[idx].updatedAt=Date.now();}else{activeConvId=null;}}
+  if(!activeConvId){activeConvId=Date.now().toString(36)+Math.random().toString(36).slice(2,6);convs.push({id:activeConvId,messages:chatHistory,createdAt:Date.now(),updatedAt:Date.now()});}
+  saveConversations(convs);renderConvList();
+}
+function deleteConversation(id){
+  saveConversations(loadConversations().filter(c=>c.id!==id));
+  if(activeConvId===id){activeConvId=null;chatHistory=[];clearChatUI();}renderConvList();
+}
+function clearAllConversations(){
+  if(!confirm('Clear all conversation history?'))return;
+  localStorage.removeItem(CONV_KEY);activeConvId=null;chatHistory=[];clearChatUI();renderConvList();
+}
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 function updateChatModelSelect(){
   const sel=document.getElementById('chat-model-select');const cur=sel.value;
@@ -1108,22 +1003,19 @@ function formatMessage(text){
   text=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   text=text.replace(/\n/g,'<br>');return text;
 }
-
 async function sendMessage(){
   if(chatStreaming)return;
   const input=document.getElementById('chat-input');
-  const modelSel=document.getElementById('chat-model-select');
-  const text=input.value.trim();const model=modelSel.value;
+  const model=document.getElementById('chat-model-select').value;
+  const text=input.value.trim();
   if(!model){document.getElementById('no-model-warn').style.display='block';return;}
   document.getElementById('no-model-warn').style.display='none';
   if(!text)return;
   input.value='';input.style.height='auto';
   chatHistory.push({role:'user',content:text});
-
   const msgs=document.getElementById('chat-messages');
-  const placeholder=msgs.querySelector('[data-placeholder]');if(placeholder)placeholder.remove();
+  const ph=msgs.querySelector('[data-placeholder]');if(ph)ph.remove();
   const userDiv=document.createElement('div');userDiv.className='chat-bubble user';userDiv.textContent=text;msgs.appendChild(userDiv);
-
   const replyId='reply-'+Date.now();
   const replyDiv=document.createElement('div');replyDiv.className='chat-bubble assistant';replyDiv.id=replyId;
   replyDiv.innerHTML=`<div class="thinking-wrap"><div class="thinking-dots"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div>
@@ -1132,6 +1024,7 @@ async function sendMessage(){
 
   let fullText='',thinkText='',responseStarted=false;
   let tokenCount=0,streamStart=0,tpsInterval=null;
+
   chatStreaming=true;document.getElementById('chat-send').disabled=true;
   streamStart=Date.now();
   const tpsEl=document.getElementById('chat-tps');
@@ -1139,91 +1032,78 @@ async function sendMessage(){
   tpsEl.classList.remove('hidden');tpsVal.textContent='…';
   tpsInterval=setInterval(()=>{
     const secs=(Date.now()-streamStart)/1000;
-    if(secs>0.3&&tokenCount>0) tpsVal.textContent=(tokenCount/secs).toFixed(1);
+    if(secs>0.3&&tokenCount>0)tpsVal.textContent=(tokenCount/secs).toFixed(1);
   },300);
 
-  // Build messages array including optional system prompt
   const systemMsg=cfg.system.trim()?[{role:'system',content:cfg.system}]:[];
-  const payload={
-    model,messages:[...systemMsg,...chatHistory],stream:true,
-    temperature:cfg.temperature,max_tokens:cfg.max_tokens,top_p:cfg.top_p
-  };
-
   try{
     const res=await fetch(`${API_BASE}/v1/chat/completions`,{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:[...systemMsg,...chatHistory],stream:true,temperature:cfg.temperature,max_tokens:cfg.max_tokens,top_p:cfg.top_p})
     });
     if(!res.ok){
       const err=await res.json().catch(()=>({detail:'Unknown error'}));
       replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
-      chatStreaming=false;document.getElementById('chat-send').disabled=false;return;
-    }
-    const reader=res.body.getReader(),decoder=new TextDecoder();
-    while(true){
-      const{done,value}=await reader.read();if(done)break;
-      for(const line of decoder.decode(value).split('\n')){
-        if(!line.startsWith('data: '))continue;
-        const chunk=line.slice(6).trim();if(chunk==='[DONE]')break;
-        try{
-          const parsed=JSON.parse(chunk);
-          if(parsed.error){
-            replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(parsed.detail||parsed.error)}</span>`;
-            clearInterval(tpsInterval);tpsEl.classList.add('hidden');
-            chatStreaming=false;document.getElementById('chat-send').disabled=false;return;
-          }
-          const delta=parsed.choices?.[0]?.delta?.content||'';if(!delta)continue;
-          fullText+=delta;tokenCount++;
-          const thinkMatch=fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
-          if(thinkMatch){
-            thinkText=thinkMatch[1];
-            const tb=document.getElementById(`${replyId}-tb`);
-            const tc=document.getElementById(`${replyId}-tc`);
-            if(tb&&tc){tb.classList.add('has-content');tc.textContent=thinkText;tb.scrollTop=tb.scrollHeight;}
-          }
-          const display=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/i,'').trim();
-          if(display){
-            if(!responseStarted){
-              responseStarted=true;
-              const existThink=replyDiv.querySelector('.thinking-text');
-              const clone=existThink?existThink.cloneNode(true):null;
-              replyDiv.innerHTML=formatMessage(display);
-              if(clone&&thinkText){clone.style.marginBottom='10px';replyDiv.insertBefore(clone,replyDiv.firstChild);}
-            }else{
-              const existThink=replyDiv.querySelector('.thinking-text');
-              replyDiv.innerHTML=formatMessage(display);
-              if(existThink)replyDiv.insertBefore(existThink,replyDiv.firstChild);
+    }else{
+      const reader=res.body.getReader(),decoder=new TextDecoder();
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        for(const line of decoder.decode(value).split('\n')){
+          if(!line.startsWith('data: '))continue;
+          const chunk=line.slice(6).trim();if(chunk==='[DONE]')break;
+          try{
+            const parsed=JSON.parse(chunk);
+            if(parsed.error){replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(parsed.detail||parsed.error)}</span>`;break;}
+            const delta=parsed.choices?.[0]?.delta?.content||'';if(!delta)continue;
+            fullText+=delta;tokenCount++;
+            const thinkMatch=fullText.match(/<think>([\s\S]*?)(<\/think>|$)/i);
+            if(thinkMatch){
+              thinkText=thinkMatch[1];
+              const tb=document.getElementById(`${replyId}-tb`);
+              const tc=document.getElementById(`${replyId}-tc`);
+              if(tb&&tc){tb.classList.add('has-content');tc.textContent=thinkText;tb.scrollTop=tb.scrollHeight;}
             }
-          }
-          msgs.scrollTop=msgs.scrollHeight;
-        }catch(_){}
+            const display=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<think>[\s\S]*/i,'').trim();
+            if(display){
+              if(!responseStarted){
+                responseStarted=true;
+                const existThink=replyDiv.querySelector('.thinking-text');
+                const clone=existThink?existThink.cloneNode(true):null;
+                replyDiv.innerHTML=formatMessage(display);
+                if(clone&&thinkText){clone.style.marginBottom='10px';replyDiv.insertBefore(clone,replyDiv.firstChild);}
+              }else{
+                const existThink=replyDiv.querySelector('.thinking-text');
+                replyDiv.innerHTML=formatMessage(display);
+                if(existThink)replyDiv.insertBefore(existThink,replyDiv.firstChild);
+              }
+            }
+            msgs.scrollTop=msgs.scrollHeight;
+          }catch(_){}
+        }
       }
-    }
-    const final=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
-    if(final){
-      const existThink=replyDiv.querySelector('.thinking-text');
-      replyDiv.innerHTML=formatMessage(final);
-      if(thinkText){
-        const tbox=document.createElement('div');tbox.className='thinking-text has-content';tbox.style.marginBottom='10px';
-        tbox.innerHTML=`<div class="thinking-label">Thought process</div><div>${escapeHtml(thinkText)}</div>`;
-        if(existThink){existThink.innerHTML=tbox.innerHTML;replyDiv.insertBefore(existThink,replyDiv.firstChild);}
-        else replyDiv.insertBefore(tbox,replyDiv.firstChild);
+      const final=fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
+      if(final){
+        const existThink=replyDiv.querySelector('.thinking-text');
+        replyDiv.innerHTML=formatMessage(final);
+        if(thinkText){
+          const tbox=document.createElement('div');tbox.className='thinking-text has-content';tbox.style.marginBottom='10px';
+          tbox.innerHTML=`<div class="thinking-label">Thought process</div><div>${escapeHtml(thinkText)}</div>`;
+          if(existThink){existThink.innerHTML=tbox.innerHTML;replyDiv.insertBefore(existThink,replyDiv.firstChild);}
+          else replyDiv.insertBefore(tbox,replyDiv.firstChild);
+        }
       }
+      chatHistory.push({role:'assistant',content:fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim()});
+      saveCurrentConversation();
     }
-    chatHistory.push({role:'assistant',content:fullText.replace(/<think>[\s\S]*?<\/think>/gi,'').trim()});
-    saveCurrentConversation();
   }catch(e){
-    replyDiv.innerHTML=`<span style="color:var(--red)">Connection error — is Ollama / llama-server running?</span>`;
+    replyDiv.innerHTML=`<span style="color:var(--red)">Connection error — is Ollama running?</span>`;
   }
   clearInterval(tpsInterval);
   const finalSecs=(Date.now()-streamStart)/1000;
-  if(tokenCount>0&&finalSecs>0){
-    document.getElementById('chat-tps-val').textContent=(tokenCount/finalSecs).toFixed(1);
-  } else {
-    document.getElementById('chat-tps').classList.add('hidden');
-  }
+  if(tokenCount>0&&finalSecs>0)tpsVal.textContent=(tokenCount/finalSecs).toFixed(1);
+  else tpsEl.classList.add('hidden');
   chatStreaming=false;document.getElementById('chat-send').disabled=false;
 }
-
 document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
 document.getElementById('chat-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
 
@@ -1246,8 +1126,6 @@ function updateHeaderStats(){
   document.getElementById('hs-mem').textContent=fmtMem(totalMem)||'—';
   document.getElementById('hs-tflops').textContent=totalTf?totalTf.toFixed(1):'—';
 }
-
-// ── Copy URL ──────────────────────────────────────────────────────────────────
 function copyUrl(){
   navigator.clipboard.writeText(API_BASE).then(()=>{
     const b=document.getElementById('copy-url-btn');b.textContent='Copied!';b.classList.add('copied');
@@ -1256,28 +1134,22 @@ function copyUrl(){
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-// Safety reset: if chatStreaming gets stuck (e.g. lost connection mid-stream), reset after 60s
+// Safety reset: if chatStreaming gets stuck, auto-reset after 90s
 setInterval(()=>{
-  if(chatStreaming){
-    const btn=document.getElementById('chat-send');
-    if(btn&&btn.disabled) return; // still actively sending, leave alone
-    chatStreaming=false;
-    clearInterval(tpsInterval);
-    const tpsEl=document.getElementById('chat-tps');
-    if(tpsEl) tpsEl.classList.add('hidden');
+  if(chatStreaming&&document.getElementById('chat-send')?.disabled){
+    const elapsed=(Date.now()-streamStart)/1000;
+    if(elapsed>90){chatStreaming=false;document.getElementById('chat-send').disabled=false;document.getElementById('chat-tps').classList.add('hidden');}
   }
-},60000);
+},10000);
 
 renderConvList();
 connect();
-window.addEventListener('resize',()=>{
-  if(peers.length) renderClusterViz();
-});
+window.addEventListener('resize',()=>{if(peers.length)renderClusterViz();});
 setTimeout(()=>{
   if(!peers.length){
     fetch(API_BASE+'/api/cluster').then(r=>r.json()).then(d=>{
       peers=d.peers||[];
-      renderNodeCards();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();
+      renderClusterViz();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();
     }).catch(()=>{});
   }
 },1200);
