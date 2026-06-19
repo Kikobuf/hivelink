@@ -990,17 +990,36 @@ async function startPull(){
     }
     const reader=res.body.getReader(),decoder=new TextDecoder();
     let buffer='';
-    while(true){
-      const{done,value}=await reader.read();if(done)break;
-      buffer+=decoder.decode(value,{stream:true});
-      const lines=buffer.split('\n');
-      buffer=lines.pop(); // keep incomplete last line
-      for(const line of lines){
-        if(!line.trim())continue;
-        try{
-          const obj=JSON.parse(line);
-          if(obj.status==='error'){
-            throw new Error(obj.detail||'Pull failed');
+    let lastChunkTime=Date.now();
+    let stalled=false;
+
+    // Watchdog: if no data arrives for 25s, surface a clear stalled message
+    const watchdog=setInterval(()=>{
+      if(Date.now()-lastChunkTime>25000 && !stalled){
+        stalled=true;
+        statusText.textContent='No response from Ollama — it may be stuck. Try cancelling and running this in a terminal: ollama pull '+modelId;
+      }
+    },2000);
+
+    try{
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        lastChunkTime=Date.now();
+        if(stalled){stalled=false;} // recovered
+        buffer+=decoder.decode(value,{stream:true});
+        const lines=buffer.split('\n');
+        buffer=lines.pop(); // keep incomplete last line
+        for(const line of lines){
+          if(!line.trim())continue;
+          let obj=null;
+          try{ obj=JSON.parse(line); }
+          catch(parseErr){
+            if(line.trim()) statusText.textContent=line.trim();
+            continue;
+          }
+          if(obj.status==='error'||obj.error){
+            clearInterval(watchdog);
+            throw new Error(obj.detail||obj.error||'Pull failed');
           }
           if(obj.status){
             statusText.textContent=obj.status;
@@ -1015,11 +1034,10 @@ async function startPull(){
             document.getElementById('pull-success').classList.add('active');
             setTimeout(()=>{closePullModal();fetchModels();},1200);
           }
-        }catch(parseErr){
-          // Non-JSON line (e.g. plain error text) — show as status
-          if(line.trim()) statusText.textContent=line.trim();
         }
       }
+    } finally {
+      clearInterval(watchdog);
     }
   }catch(e){
     document.getElementById('pull-error').textContent='Error: '+e.message;

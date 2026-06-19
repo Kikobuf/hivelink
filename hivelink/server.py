@@ -387,7 +387,14 @@ async def pull_model(req: PullRequest):
         except Exception as e:
             yield (str(e)[:120] + "\n").encode()
 
-    return StreamingResponse(gen(), media_type="application/x-ndjson")
+    return StreamingResponse(
+        gen(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disable proxy buffering (nginx etc.)
+        },
+    )
 
 
 @app.get("/health")
