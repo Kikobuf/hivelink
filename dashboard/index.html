@@ -591,11 +591,17 @@ function setConn(cls,label){
 
 // ── Brand icons ───────────────────────────────────────────────────────────────
 const SI='https://cdn.simpleicons.org';
+// Global handler avoids inline-string quote-escaping bugs entirely.
+// Called from the <img onerror> below with `this` as the failed <img> element.
+function _iconLoadError(img){
+  const size=img.getAttribute('width')||'13';
+  const color=img.dataset.fallbackColor||'7d8590';
+  const span=document.createElement('span');
+  span.innerHTML=`<i class="fa-solid fa-cube" style="color:#${color};font-size:${Math.max(8,size-2)}px"></i>`;
+  img.replaceWith(span.firstElementChild);
+}
 function siImg(slug,color,size=13){
-  // Fallback to a generic icon (instead of vanishing) if the CDN image fails to load,
-  // so a broken icon URL never leaves a blank gap in a model/node card.
-  const fallback=`<i class="fa-solid fa-cube" style="color:#${color};font-size:${size-2}px"></i>`;
-  return `<img src="${SI}/${slug}/${color}" width="${size}" height="${size}" style="display:inline-block;vertical-align:middle;flex-shrink:0" onerror="this.outerHTML='${fallback.replace(/'/g, "\\'")}'">`;
+  return `<img src="${SI}/${slug}/${color}" width="${size}" height="${size}" data-fallback-color="${color}" style="display:inline-block;vertical-align:middle;flex-shrink:0" onerror="_iconLoadError(this)">`;
 }
 function osIcon(os){
   const map={
