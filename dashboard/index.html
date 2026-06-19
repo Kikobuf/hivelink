@@ -160,6 +160,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-size{font-size:10px;color:var(--muted);font-family:var(--mono)}
 .quant-pill{display:inline-block;padding:1px 6px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;font-size:10px;font-family:var(--mono);color:var(--muted)}
 .live-pill{display:inline-block;padding:1px 6px;background:#3fb95018;border:1px solid #3fb95044;border-radius:3px;font-size:10px;color:var(--green)}
+.cached-pill{display:inline-block;padding:1px 6px;background:#58a6ff18;border:1px solid #58a6ff44;border-radius:3px;font-size:10px;color:var(--cpu)}
 .pull-btn{display:flex;align-items:center;gap:7px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer}
 .pull-btn:hover{background:#1f6feb}
 .pull-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}
@@ -1074,7 +1075,10 @@ function renderModels(){
     const pct=totalMem>0&&m.size_mb?Math.min(100,Math.round(m.size_mb/totalMem*100)):30;
     const color=COLORS[i%COLORS.length];
     const sel=selectedModel===m.model_id?' selected':'';
-    const pill=m.live?`<span class="live-pill">● live</span>`:`<span class="quant-pill">Q${m.quant_bits}</span>`;
+    let pill;
+    if(m.live)        pill=`<span class="live-pill">● live</span>`;
+    else if(m.cached) pill=`<span class="cached-pill">⬇ cached</span>`;
+    else              pill=`<span class="quant-pill">Q${m.quant_bits}</span>`;
     return`<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits||4})">
       <div class="model-header-row"><div class="model-logo" style="background:${meta.bg}">${meta.icon}</div>
         <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b+'B params':'loaded'}</div></div>${pill}</div>
@@ -1166,7 +1170,10 @@ function clearAllConversations(){
 function updateChatModelSelect(){
   const sel=document.getElementById('chat-model-select');const cur=sel.value;
   sel.innerHTML='<option value="">— select model —</option>'+
-    models.map(m=>`<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${m.live?' ● live':' (Q'+m.quant_bits+')'}</option>`).join('');
+    models.map(m=>{
+      const tag = m.live ? ' ● live' : m.cached ? ' (cached)' : ' (Q'+m.quant_bits+')';
+      return `<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${tag}</option>`;
+    }).join('');
 }
 function clearChatUI(){
   document.getElementById('chat-messages').innerHTML='<div data-placeholder style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>';

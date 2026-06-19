@@ -219,7 +219,7 @@ async def get_stats():
 
 
 async def _ollama_models() -> list[str]:
-    """Fetch live models from Ollama / llama-server / vLLM / MLX."""
+    """Fetch currently-loaded (actively serving) models from Ollama / llama-server / vLLM / MLX."""
     ports_to_try = list(dict.fromkeys([LLAMA_CPP_SERVER_PORT, 11434, 8080, 8000, 10240]))
     async with httpx.AsyncClient(timeout=2) as client:
         for port in ports_to_try:
@@ -234,29 +234,83 @@ async def _ollama_models() -> list[str]:
     return []
 
 
+async def _ollama_cached_models() -> list[dict]:
+    """
+    Fetch models pulled and cached on disk via Ollama's native /api/tags endpoint.
+    This is distinct from _ollama_models() above: a model can be cached (downloaded,
+    ready to use) without being currently loaded into memory. /api/tags also returns
+    real size_mb and parameter info straight from Ollama, which is more accurate
+    than our static MODEL_SPECS estimates.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=2) as client:
+            resp = await client.get("http://127.0.0.1:11434/api/tags")
+            if resp.status_code == 200:
+                models = resp.json().get("models", [])
+                out = []
+                for m in models:
+                    details = m.get("details", {}) or {}
+                    out.append({
+                        "model_id":      m.get("name", ""),
+                        "size_mb":       round((m.get("size", 0) or 0) / (1024 * 1024)),
+                        "param_size":    details.get("parameter_size", ""),   # e.g. "8.0B"
+                        "quant_level":   details.get("quantization_level", ""),  # e.g. "Q4_K_M"
+                        "family":        details.get("family", ""),
+                        "modified_at":   m.get("modified_at", ""),
+                    })
+                return out
+    except Exception:
+        pass
+    return []
+
+
 @app.get("/api/models")
 async def get_models():
     if not _discovery:
         raise HTTPException(503, "Discovery not running")
     peers = _discovery.active_peers()
 
-    live_model_ids = await _ollama_models()
+    live_model_ids   = await _ollama_models()
+    cached_models    = await _ollama_cached_models()
+    live_ids_lower   = {m.lower() for m in live_model_ids}
+    cached_ids_lower = {m["model_id"].lower() for m in cached_models}
+
     models = []
 
+    # 1. Live models — currently loaded and actively serving requests
     for mid in live_model_ids:
+        cached_match = next((c for c in cached_models if c["model_id"].lower() == mid.lower()), None)
         models.append({
-            "model_id":   mid,
-            "params_b":   0,
-            "layers":     0,
-            "quant_bits": 4,
-            "size_mb":    0,
-            "can_run":    True,
-            "live":       True,
+            "model_id":    mid,
+            "params_b":    _parse_param_size(cached_match["param_size"]) if cached_match else 0,
+            "layers":      0,
+            "quant_bits":  4,
+            "size_mb":     cached_match["size_mb"] if cached_match else 0,
+            "can_run":     True,
+            "live":        True,
+            "cached":      True,
         })
 
-    live_ids_lower = {m.lower() for m in live_model_ids}
+    # 2. Cached models — pulled and ready on disk, but not currently loaded into memory
+    for c in cached_models:
+        if c["model_id"].lower() in live_ids_lower:
+            continue  # already listed above as live
+        models.append({
+            "model_id":    c["model_id"],
+            "params_b":    _parse_param_size(c["param_size"]),
+            "layers":      0,
+            "quant_bits":  4,
+            "size_mb":     c["size_mb"],
+            "can_run":     True,
+            "live":        False,
+            "cached":      True,
+        })
+
+    # 3. Known models from MODEL_SPECS — not yet pulled anywhere, shown as pullable
+    #    if the cluster's combined memory could theoretically run them
     for model_id, (layers, params_b) in MODEL_SPECS.items():
-        if any(model_id in lid for lid in live_ids_lower):
+        already_shown = any(model_id in lid for lid in live_ids_lower | cached_ids_lower)
+        if already_shown:
             continue
         for bits in [4, 8]:
             check = can_run_model(peers, model_id, bits)
@@ -269,10 +323,26 @@ async def get_models():
                     "size_mb":    check["needed_mb"],
                     "can_run":    True,
                     "live":       False,
+                    "cached":     False,
                 })
                 break
 
     return {"models": models}
+
+
+def _parse_param_size(param_size: str) -> float:
+    """Parse Ollama's parameter_size string (e.g. '8.0B', '671B', '3.8M') into a float of billions."""
+    if not param_size:
+        return 0.0
+    s = param_size.strip().upper()
+    try:
+        if s.endswith("B"):
+            return float(s[:-1])
+        if s.endswith("M"):
+            return float(s[:-1]) / 1000.0
+        return float(s)
+    except ValueError:
+        return 0.0
 
 
 @app.get("/api/plan/{model_id}")
