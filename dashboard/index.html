@@ -592,7 +592,10 @@ function setConn(cls,label){
 // ── Brand icons ───────────────────────────────────────────────────────────────
 const SI='https://cdn.simpleicons.org';
 function siImg(slug,color,size=13){
-  return `<img src="${SI}/${slug}/${color}" width="${size}" height="${size}" style="display:inline-block;vertical-align:middle;flex-shrink:0" onerror="this.style.display='none'">`;
+  // Fallback to a generic icon (instead of vanishing) if the CDN image fails to load,
+  // so a broken icon URL never leaves a blank gap in a model/node card.
+  const fallback=`<i class="fa-solid fa-cube" style="color:#${color};font-size:${size-2}px"></i>`;
+  return `<img src="${SI}/${slug}/${color}" width="${size}" height="${size}" style="display:inline-block;vertical-align:middle;flex-shrink:0" onerror="this.outerHTML='${fallback.replace(/'/g, "\\'")}'">`;
 }
 function osIcon(os){
   const map={
@@ -633,7 +636,7 @@ const MODEL_META={
   mixtral:{bg:'#FF7000',icon:siImg('mistralai','ffffff',13)},
   deepseek:{bg:'#4D6BFE',icon:siImg('deepseek','ffffff',13)},
   gemma:{bg:'#8E75B2',icon:siImg('googlegemini','ffffff',13)},
-  phi:{bg:'#0078d4',icon:siImg('microsoft','ffffff',13)},
+  phi:{bg:'#0078d4',icon:'<i class="fa-brands fa-microsoft" style="color:#fff;font-size:11px"></i>'},
   default:{bg:'#30363d',icon:'<i class="fa-solid fa-cube" style="color:#7d8590;font-size:10px"></i>'},
 };
 function modelMeta(id){
