@@ -193,5 +193,69 @@ def install_llama():
     console.print(f"  [cyan]{dest} --model path/to/model.gguf --port 8080[/]")
 
 
+@app.command()
+def pull(
+    model_id: str = typer.Argument(..., help="Model to pull, e.g. llama3.2, qwen2.5:7b, mistral"),
+    port:     int = typer.Option(47730, "--port", "-p", help="HiveLink API port (used to detect local engines)"),
+):
+    """
+    Pull a model so it's available to the cluster.
+
+    Detects which inference engine is running locally and uses the right
+    pull mechanism:
+      - Ollama running    -> `ollama pull <model>` (streams progress)
+      - No engine running -> prints setup instructions
+
+    Once pulled, the model shows up automatically in `hivelink models`
+    and the dashboard's Models tab on every node running this engine.
+    """
+    import shutil
+    import subprocess
+
+    ollama_bin = shutil.which("ollama")
+
+    if ollama_bin:
+        console.print(f"[bold]Pulling[/] [cyan]{model_id}[/] via Ollama...\n")
+        try:
+            # ollama pull streams its own progress bar to stdout — just pipe it through
+            result = subprocess.run([ollama_bin, "pull", model_id])
+            if result.returncode == 0:
+                console.print(f"\n[green]✓[/] {model_id} pulled successfully.")
+                console.print(f"It will appear in [cyan]hivelink models[/] and the dashboard "
+                               f"once Ollama has it loaded.")
+            else:
+                rprint(f"[red]ollama pull exited with code {result.returncode}[/]")
+                raise typer.Exit(1)
+        except FileNotFoundError:
+            rprint("[red]Ollama binary found on PATH but failed to execute.[/]")
+            raise typer.Exit(1)
+        return
+
+    # No engine detected — check if HiveLink itself is running to give a more specific hint
+    import httpx
+    try:
+        httpx.get(f"http://localhost:{port}/health", timeout=2)
+        hivelink_running = True
+    except Exception:
+        hivelink_running = False
+
+    rprint("[yellow]No inference engine found on this machine.[/]\n")
+    rprint("HiveLink doesn't bundle model downloading itself — it routes to "
+           "whichever engine (Ollama, llama-server, MLX, vLLM) you have installed.\n")
+    rprint("[bold]Easiest option — install Ollama:[/]")
+    if platform.system().lower() == "darwin":
+        rprint("  [cyan]brew install ollama[/]  (or download from https://ollama.com)")
+    elif platform.system().lower() == "windows":
+        rprint("  Download from [cyan]https://ollama.com/download/windows[/]")
+    else:
+        rprint("  [cyan]curl -fsSL https://ollama.com/install.sh | sh[/]")
+    rprint(f"\nThen run: [cyan]hivelink pull {model_id}[/] again\n")
+
+    if hivelink_running:
+        rprint("[dim]HiveLink is running but found no engine — once Ollama is installed "
+               "and this model is pulled, it'll be auto-detected within a few seconds.[/]")
+    raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

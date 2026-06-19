@@ -160,6 +160,33 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-size{font-size:10px;color:var(--muted);font-family:var(--mono)}
 .quant-pill{display:inline-block;padding:1px 6px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;font-size:10px;font-family:var(--mono);color:var(--muted)}
 .live-pill{display:inline-block;padding:1px 6px;background:#3fb95018;border:1px solid #3fb95044;border-radius:3px;font-size:10px;color:var(--green)}
+.pull-btn{display:flex;align-items:center;gap:7px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer}
+.pull-btn:hover{background:#1f6feb}
+.pull-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}
+.pull-modal-overlay.open{display:flex}
+.pull-modal{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:420px;max-width:90vw;overflow:hidden}
+.pull-modal-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pull-modal-title{font-size:14px;font-weight:600}
+.pull-modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.pull-modal-close:hover{color:var(--text)}
+.pull-modal-body{padding:18px}
+.pull-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none}
+.pull-input:focus{border-color:var(--accent)}
+.pull-hint{font-size:11px;color:var(--muted);margin-top:6px}
+.pull-progress-wrap{margin-top:14px;display:none}
+.pull-progress-wrap.active{display:block}
+.pull-status-text{font-size:12px;color:var(--text);font-family:var(--mono);margin-bottom:6px;word-break:break-all}
+.pull-progress-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.pull-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s ease;width:0%}
+.pull-progress-pct{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px;text-align:right}
+.pull-error{color:var(--red);font-size:12px;margin-top:10px;display:none}
+.pull-error.active{display:block}
+.pull-success{color:var(--green);font-size:12px;margin-top:10px;display:none}
+.pull-success.active{display:block}
+.pull-modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.pull-cancel-btn{padding:7px 14px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);font-size:12px;cursor:pointer}
+.pull-go-btn{padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer}
+.pull-go-btn:disabled{opacity:.5;cursor:default}
 
 /* ── Layer plan ── */
 .layer-assignment{margin-bottom:12px}
@@ -348,7 +375,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <!-- Models page -->
 <div class="page" id="page-models">
-  <div class="page-header"><div class="page-title">Models</div><div class="page-sub">Click a model to see the layer distribution plan</div></div>
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+    <div><div class="page-title">Models</div><div class="page-sub">Click a model to see the layer distribution plan</div></div>
+    <button class="pull-btn" onclick="openPullModal()"><i class="fa-solid fa-download" style="font-size:11px"></i> Pull model</button>
+  </div>
   <div class="models-grid" id="models-grid">
     <div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-cube" style="color:var(--muted2)"></i></div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>
   </div>
@@ -444,6 +474,30 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<!-- Pull model modal -->
+<div class="pull-modal-overlay" id="pull-modal-overlay" onclick="if(event.target===this)closePullModal()">
+  <div class="pull-modal">
+    <div class="pull-modal-header">
+      <span class="pull-modal-title">Pull a model</span>
+      <button class="pull-modal-close" onclick="closePullModal()">✕</button>
+    </div>
+    <div class="pull-modal-body">
+      <input type="text" class="pull-input" id="pull-model-input" placeholder="llama3.2, qwen2.5:7b, mistral…" autocomplete="off">
+      <div class="pull-hint">Downloads via Ollama on this node. Appears in the cluster once pulled.</div>
+      <div class="pull-progress-wrap" id="pull-progress-wrap">
+        <div class="pull-status-text" id="pull-status-text">Starting…</div>
+        <div class="pull-progress-track"><div class="pull-progress-fill" id="pull-progress-fill"></div></div>
+        <div class="pull-progress-pct" id="pull-progress-pct"></div>
+      </div>
+      <div class="pull-error" id="pull-error"></div>
+      <div class="pull-success" id="pull-success">✓ Pulled successfully — refreshing models…</div>
+    </div>
+    <div class="pull-modal-footer">
+      <button class="pull-cancel-btn" onclick="closePullModal()">Cancel</button>
+      <button class="pull-go-btn" id="pull-go-btn" onclick="startPull()">Pull</button>
+    </div>
+  </div>
+</div>
 </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -891,6 +945,93 @@ function renderHardware(){
     </div>`;
   }).join('');
 }
+
+// ── Pull model modal ─────────────────────────────────────────────────────────
+function openPullModal(){
+  document.getElementById('pull-modal-overlay').classList.add('open');
+  document.getElementById('pull-model-input').value='';
+  document.getElementById('pull-model-input').focus();
+  resetPullModal();
+}
+function closePullModal(){
+  document.getElementById('pull-modal-overlay').classList.remove('open');
+}
+function resetPullModal(){
+  document.getElementById('pull-progress-wrap').classList.remove('active');
+  document.getElementById('pull-error').classList.remove('active');
+  document.getElementById('pull-success').classList.remove('active');
+  document.getElementById('pull-progress-fill').style.width='0%';
+  document.getElementById('pull-progress-pct').textContent='';
+  document.getElementById('pull-go-btn').disabled=false;
+  document.getElementById('pull-go-btn').textContent='Pull';
+}
+
+async function startPull(){
+  const input=document.getElementById('pull-model-input');
+  const modelId=input.value.trim();
+  if(!modelId)return;
+
+  resetPullModal();
+  document.getElementById('pull-progress-wrap').classList.add('active');
+  document.getElementById('pull-go-btn').disabled=true;
+  document.getElementById('pull-go-btn').textContent='Pulling…';
+  const statusText=document.getElementById('pull-status-text');
+  const fill=document.getElementById('pull-progress-fill');
+  const pct=document.getElementById('pull-progress-pct');
+  statusText.textContent='Connecting…';
+
+  try{
+    const res=await fetch(`${API_BASE}/api/pull`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:modelId})
+    });
+    if(!res.ok||!res.body){
+      throw new Error('Could not start pull — is HiveLink running?');
+    }
+    const reader=res.body.getReader(),decoder=new TextDecoder();
+    let buffer='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buffer+=decoder.decode(value,{stream:true});
+      const lines=buffer.split('\n');
+      buffer=lines.pop(); // keep incomplete last line
+      for(const line of lines){
+        if(!line.trim())continue;
+        try{
+          const obj=JSON.parse(line);
+          if(obj.status==='error'){
+            throw new Error(obj.detail||'Pull failed');
+          }
+          if(obj.status){
+            statusText.textContent=obj.status;
+          }
+          if(obj.total&&obj.completed){
+            const p=Math.round(obj.completed/obj.total*100);
+            fill.style.width=p+'%';
+            pct.textContent=p+'% — '+(obj.completed/1e9).toFixed(2)+' / '+(obj.total/1e9).toFixed(2)+' GB';
+          }
+          if(obj.status==='success'){
+            fill.style.width='100%';
+            document.getElementById('pull-success').classList.add('active');
+            setTimeout(()=>{closePullModal();fetchModels();},1200);
+          }
+        }catch(parseErr){
+          // Non-JSON line (e.g. plain error text) — show as status
+          if(line.trim()) statusText.textContent=line.trim();
+        }
+      }
+    }
+  }catch(e){
+    document.getElementById('pull-error').textContent='Error: '+e.message;
+    document.getElementById('pull-error').classList.add('active');
+    document.getElementById('pull-go-btn').disabled=false;
+    document.getElementById('pull-go-btn').textContent='Retry';
+  }
+}
+
+document.getElementById('pull-model-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();startPull();}
+});
 
 // ── Models ────────────────────────────────────────────────────────────────────
 async function fetchModels(){

@@ -357,6 +357,39 @@ async def list_models():
     ]}
 
 
+class PullRequest(BaseModel):
+    model: str
+
+
+@app.post("/api/pull")
+async def pull_model(req: PullRequest):
+    """
+    Pull a model via Ollama's native pull API and stream progress back.
+    Ollama exposes POST /api/pull with stream=true, returning newline-delimited
+    JSON progress objects — we just relay that stream as-is.
+    """
+    ollama_url = "http://127.0.0.1:11434/api/pull"
+
+    async def gen() -> AsyncGenerator[bytes, None]:
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream(
+                    "POST", ollama_url,
+                    json={"model": req.model, "stream": True},
+                ) as resp:
+                    if resp.status_code != 200:
+                        yield b'{"status":"error","detail":"Ollama not reachable on port 11434"}\n'
+                        return
+                    async for chunk in resp.aiter_bytes():
+                        yield chunk
+        except httpx.ConnectError:
+            yield b'{"status":"error","detail":"Ollama not running on port 11434"}\n'
+        except Exception as e:
+            yield (str(e)[:120] + "\n").encode()
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "node_id": _node_id[:8], "ts": time.time()}
