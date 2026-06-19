@@ -60,20 +60,32 @@ class ClusterPlan:
 
 
 # (total_layers, params_B)
+# Model IDs match actual Ollama library tags (e.g. `ollama pull llama3.1:8b`)
+# so names shown in HiveLink are directly pullable, not approximations.
 MODEL_SPECS: dict[str, tuple[int, float]] = {
-    "llama3-8b":        (32,   8.0),
-    "llama3-70b":       (80,  70.0),
-    "llama3-405b":      (126, 405.0),
-    "qwen2.5-7b":       (28,   7.0),
-    "qwen2.5-14b":      (48,  14.0),
-    "qwen2.5-32b":      (64,  32.0),
-    "qwen2.5-72b":      (80,  72.0),
-    "mistral-7b":       (32,   7.0),
-    "mixtral-8x7b":     (32,  46.7),
-    "deepseek-r1-7b":   (28,   7.0),
-    "deepseek-r1-70b":  (80,  70.0),
-    "gemma2-9b":        (42,   9.0),
-    "gemma2-27b":       (46,  27.0),
+    "llama3.2:1b":          (16,   1.0),
+    "llama3.2:3b":          (28,   3.0),
+    "llama3.1:8b":          (32,   8.0),
+    "llama3.1:70b":         (80,  70.0),
+    "llama3.1:405b":        (126, 405.0),
+    "llama3.3:70b":         (80,  70.0),
+    "qwen2.5:7b":           (28,   7.0),
+    "qwen2.5:14b":          (48,  14.0),
+    "qwen2.5:32b":          (64,  32.0),
+    "qwen2.5:72b":          (80,  72.0),
+    "qwen2.5-coder:7b":     (28,   7.0),
+    "qwen2.5-coder:32b":    (64,  32.0),
+    "mistral:7b":           (32,   7.0),
+    "mixtral:8x7b":         (32,  46.7),
+    "deepseek-r1:7b":       (28,   7.0),
+    "deepseek-r1:8b":       (32,   8.0),
+    "deepseek-r1:14b":      (48,  14.0),
+    "deepseek-r1:32b":      (64,  32.0),
+    "deepseek-r1:70b":      (80,  70.0),
+    "gemma2:9b":            (42,   9.0),
+    "gemma2:27b":           (46,  27.0),
+    "phi4-mini":            (32,   3.8),
+    "phi4":                 (40,  14.0),
 }
 
 

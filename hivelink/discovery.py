@@ -29,6 +29,62 @@ ANNOUNCE_INTERVAL = 3.0
 PEER_TIMEOUT      = 12.0
 BROADCAST_ADDR    = "255.255.255.255"
 
+# Virtual adapter prefixes to skip when picking the "real" LAN IP — these are
+# typically VMware/VirtualBox/Hyper-V/Docker virtual networks, not the actual
+# home/office LAN. UDP broadcast on these never reaches other physical machines.
+_VIRTUAL_ADAPTER_PREFIXES = (
+    "192.168.56.",   # VirtualBox default host-only network
+    "192.168.99.",   # Docker Toolbox
+    "172.17.",        # Docker default bridge
+    "172.18.", "172.19.", "172.20.", "172.21.", "172.22.", "172.23.",
+    "172.24.", "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
+    "172.30.", "172.31.",  # Docker/Hyper-V ranges
+    "169.254.",        # Link-local (no real connectivity)
+)
+
+
+def _get_real_lan_ips() -> list[str]:
+    """
+    Return all non-virtual local IPv4 addresses on this machine, best guess first.
+    Used to broadcast discovery packets on the actual LAN instead of a VM/Docker
+    virtual adapter that happens to be the OS's default route.
+    """
+    ips: list[str] = []
+    try:
+        import psutil
+        for iface, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    ip = addr.address
+                    if ip.startswith("127.") or any(ip.startswith(p) for p in _VIRTUAL_ADAPTER_PREFIXES):
+                        continue
+                    ips.append(ip)
+    except ImportError:
+        pass
+
+    # Fallback: the classic "connect to 8.8.8.8 to find our outbound IP" trick —
+    # doesn't actually send packets, just asks the OS routing table.
+    if not ips:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            if not any(ip.startswith(p) for p in _VIRTUAL_ADAPTER_PREFIXES):
+                ips.append(ip)
+        except Exception:
+            pass
+
+    return ips
+
+
+def _broadcast_addr_for_ip(ip: str) -> str:
+    """Compute the /24 broadcast address for a given IP, e.g. 192.168.1.115 -> 192.168.1.255."""
+    parts = ip.split(".")
+    if len(parts) == 4:
+        return f"{parts[0]}.{parts[1]}.{parts[2]}.255"
+    return BROADCAST_ADDR
+
 
 @dataclass
 class PeerInfo:
@@ -91,10 +147,31 @@ class DiscoveryService:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.setblocking(False)
         loop = asyncio.get_running_loop()
+
+        # Compute real LAN broadcast targets once at startup. Broadcasting on the
+        # actual subnet (e.g. 192.168.1.255) instead of only the global address
+        # (255.255.255.255) avoids announces silently going out on a VM/Docker
+        # virtual adapter that happens to be the OS's chosen default route.
+        real_ips = _get_real_lan_ips()
+        targets  = {BROADCAST_ADDR}
+        for ip in real_ips:
+            targets.add(_broadcast_addr_for_ip(ip))
+        if real_ips:
+            logger.info("Broadcasting discovery on real LAN IP(s): %s -> targets %s",
+                        real_ips, sorted(targets))
+        else:
+            logger.warning("Could not detect a real LAN IP — falling back to global "
+                           "broadcast only. If discovery doesn't find peers across "
+                           "machines, use --peer <ip> as a manual fallback.")
+
         while self._running:
             try:
                 packet = self._build_announce()
-                await loop.sock_sendto(sock, packet, (BROADCAST_ADDR, DISCOVERY_PORT))
+                for target in targets:
+                    try:
+                        await loop.sock_sendto(sock, packet, (target, DISCOVERY_PORT))
+                    except Exception as e:
+                        logger.debug("Broadcast to %s failed: %s", target, e)
             except Exception as e:
                 logger.debug("Broadcast error: %s", e)
             await asyncio.sleep(ANNOUNCE_INTERVAL)
