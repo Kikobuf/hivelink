@@ -48,12 +48,16 @@ def _ensure_ollama_running() -> None:
 
     try:
         if platform.system().lower() == "windows":
-            # DETACHED_PROCESS + no console window so it doesn't open a visible
-            # terminal or get killed when this process exits.
+            # CREATE_NO_WINDOW alone (not combined with DETACHED_PROCESS — that
+            # combination causes a repeated console flash-open/close loop on
+            # some Windows builds as the process tries to attach/detach a console).
+            CREATE_NO_WINDOW = 0x08000000
             subprocess.Popen(
                 [ollama_bin, "serve"],
-                creationflags=0x00000008 | 0x08000000,  # DETACHED_PROCESS | CREATE_NO_WINDOW
+                creationflags=CREATE_NO_WINDOW,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                close_fds=True,
             )
         else:
             subprocess.Popen(
