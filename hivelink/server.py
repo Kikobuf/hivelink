@@ -346,11 +346,31 @@ def _parse_param_size(param_size: str) -> float:
 
 
 @app.get("/api/plan/{model_id}")
-async def get_plan(model_id: str, quant_bits: int = 4):
+async def get_plan(
+    model_id:      str,
+    quant_bits:    int = 4,
+    sharding_mode: str = "pipeline",
+    min_nodes:     int = 1,
+):
     if not _discovery:
         raise HTTPException(503, "Discovery not running")
+    if sharding_mode not in ("pipeline", "tensor"):
+        raise HTTPException(422, f"Unknown sharding_mode '{sharding_mode}' — use 'pipeline' or 'tensor'")
+    if sharding_mode == "tensor":
+        raise HTTPException(
+            422,
+            "Tensor sharding isn't implemented yet — only pipeline sharding is supported "
+            "today. This is tracked on the roadmap (v0.4)."
+        )
+
     peers = _discovery.active_peers()
-    plan  = assign_layers(peers, model_id, quant_bits)
+    if len(peers) < min_nodes:
+        raise HTTPException(
+            422,
+            f"Minimum nodes not met — {len(peers)} node(s) online, {min_nodes} required."
+        )
+
+    plan = assign_layers(peers, model_id, quant_bits, sharding_mode=sharding_mode, min_nodes=min_nodes)
     if not plan:
         raise HTTPException(422, f"Cluster cannot run {model_id} at Q{quant_bits}")
     return plan.to_dict()

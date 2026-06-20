@@ -43,6 +43,8 @@ class ClusterPlan:
     total_params_b: float
     quant_bits: int
     assignments: list[LayerAssignment]
+    sharding_mode: str = "pipeline"   # "pipeline" (supported) or "tensor" (not yet implemented)
+    min_nodes: int = 1
 
     @property
     def node_count(self) -> int:
@@ -56,6 +58,8 @@ class ClusterPlan:
             "quant_bits":    self.quant_bits,
             "node_count":    self.node_count,
             "assignments":   [a.to_dict() for a in self.assignments],
+            "sharding_mode": self.sharding_mode,
+            "min_nodes":     self.min_nodes,
         }
 
 
@@ -99,8 +103,21 @@ def assign_layers(
     quant_bits: int = 4,
     custom_layers: int | None = None,
     custom_params_b: float | None = None,
+    sharding_mode: str = "pipeline",
+    min_nodes: int = 1,
 ) -> ClusterPlan | None:
     if not peers:
+        return None
+
+    if len(peers) < min_nodes:
+        return None  # not enough nodes online to satisfy the minimum-nodes requirement
+
+    if sharding_mode == "tensor":
+        # Tensor parallelism across separate machines isn't implemented yet — the
+        # underlying engine (llama.cpp via Ollama) doesn't support splitting individual
+        # matrix operations across network-connected nodes the way it does layers.
+        # Honestly refuse rather than silently falling back to pipeline mode, so the
+        # caller (API/dashboard) can surface a clear "not supported yet" message.
         return None
 
     spec = MODEL_SPECS.get(model_id.lower())
@@ -158,6 +175,8 @@ def assign_layers(
         total_params_b = params_b,
         quant_bits     = quant_bits,
         assignments    = assignments,
+        sharding_mode  = sharding_mode,
+        min_nodes      = min_nodes,
     )
 
 

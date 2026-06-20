@@ -154,6 +154,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-card.not-cached:hover{border-color:var(--border)}
 .model-download-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:10px;flex-shrink:0}
 .model-download-btn:hover{background:#1f6feb}
+/* Sharding controls */
+.sharding-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600}
+.sharding-toggle-group{display:flex;gap:6px}
+.sharding-toggle{display:flex;align-items:center;padding:7px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
+.sharding-toggle:hover{border-color:var(--accent)}
+.sharding-toggle.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:600}
+.sharding-toggle.disabled-mode{opacity:.55}
+.sharding-hint{font-size:10px;color:var(--muted);margin-top:7px;max-width:220px;line-height:1.5}
+.min-nodes-row{display:flex;align-items:center;gap:10px}
+.min-nodes-dot{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);font-size:12px;font-family:var(--mono);font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.min-nodes-dot:hover{border-color:var(--accent)}
+.min-nodes-dot.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
 .model-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -387,9 +399,46 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="models-grid" id="models-grid">
     <div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-cube" style="color:var(--muted2)"></i></div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>
   </div>
+  <div id="sharding-container" style="display:none;margin-top:20px">
+    <div class="card">
+      <div class="card-header">Sharding</div>
+      <div style="padding:16px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+        <div>
+          <div class="sharding-label">Strategy</div>
+          <div class="sharding-toggle-group">
+            <button class="sharding-toggle active" id="sharding-pipeline-btn" onclick="setShardingMode('pipeline')">
+              <i class="fa-solid fa-layer-group" style="font-size:10px;margin-right:5px"></i>Pipeline
+            </button>
+            <button class="sharding-toggle" id="sharding-tensor-btn" onclick="setShardingMode('tensor')">
+              <i class="fa-solid fa-share-nodes" style="font-size:10px;margin-right:5px"></i>Tensor
+            </button>
+          </div>
+          <div class="sharding-hint" id="sharding-hint">Layers split sequentially across nodes — supported today.</div>
+        </div>
+        <div>
+          <div class="sharding-label">Minimum nodes</div>
+          <div class="min-nodes-row" id="min-nodes-row">
+            <button class="min-nodes-dot active" data-n="1" onclick="setMinNodes(1)">1</button>
+            <button class="min-nodes-dot" data-n="2" onclick="setMinNodes(2)">2</button>
+            <button class="min-nodes-dot" data-n="3" onclick="setMinNodes(3)">3</button>
+            <button class="min-nodes-dot" data-n="4" onclick="setMinNodes(4)">4</button>
+          </div>
+          <div class="sharding-hint">Only run if at least this many nodes are online.</div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="plan-container" style="display:none;margin-top:20px">
     <div class="card"><div class="card-header"><span id="plan-title">Layer distribution</span></div>
     <div style="padding:16px"><div id="plan-meta" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div><div id="plan-assignments"></div></div></div>
+  </div>
+  <div id="plan-error" style="display:none;margin-top:20px">
+    <div class="card" style="border-color:#d2992244">
+      <div style="padding:16px;display:flex;align-items:center;gap:10px">
+        <i class="fa-solid fa-triangle-exclamation" style="color:var(--amber)"></i>
+        <span id="plan-error-text" style="font-size:12px;color:var(--text)"></span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -570,7 +619,7 @@ function connect(){
       if(msg.type==='cluster_update'){
         peers=msg.peers||[];
         renderClusterViz();renderNodeTable();renderHardware();
-        updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();
+        updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();updateMinNodesDots();
         // Eagerly fetch stats for non-self peers via our coordinator's relay
         peers.filter(p=>!p.is_self).forEach(p=>{
           const ip=p.hostname||p.hardware?.hostname;
@@ -1106,14 +1155,75 @@ function quickPull(modelId){
   openPullModal();
   document.getElementById('pull-model-input').value=modelId;
 }
+// ── Sharding state ────────────────────────────────────────────────────────────
+let shardingMode='pipeline';
+let minNodes=1;
+let lastSelectedQuant=4;
+
+function setShardingMode(mode){
+  shardingMode=mode;
+  document.getElementById('sharding-pipeline-btn').classList.toggle('active',mode==='pipeline');
+  document.getElementById('sharding-tensor-btn').classList.toggle('active',mode==='tensor');
+  const hint=document.getElementById('sharding-hint');
+  hint.textContent = mode==='pipeline'
+    ? 'Layers split sequentially across nodes — supported today.'
+    : 'Splits individual operations across nodes — not implemented yet, tracked on the roadmap (v0.4).';
+  if(selectedModel) selectModel(selectedModel, lastSelectedQuant);
+}
+
+// Mark Tensor as a recognizably-disabled mode (still clickable, so the honest
+// "not implemented yet" error message shows rather than the option just vanishing)
+(function initTensorButtonStyle(){
+  const btn=document.getElementById('sharding-tensor-btn');
+  if(btn) btn.classList.add('disabled-mode');
+})();
+
+// Populate min-nodes dots based on actual cluster size — never show a higher
+// minimum than the number of nodes that could ever realistically connect.
+function updateMinNodesDots(){
+  const row=document.getElementById('min-nodes-row');
+  if(!row) return;
+  const maxDots=Math.max(4, peers.length); // always show at least up to 4, more if cluster is bigger
+  row.innerHTML='';
+  for(let n=1;n<=maxDots;n++){
+    const btn=document.createElement('button');
+    btn.className='min-nodes-dot'+(n===minNodes?' active':'');
+    btn.dataset.n=n;
+    btn.textContent=n;
+    btn.onclick=()=>setMinNodes(n);
+    row.appendChild(btn);
+  }
+}
+
+function setMinNodes(n){
+  minNodes=n;
+  document.querySelectorAll('.min-nodes-dot').forEach(el=>{
+    el.classList.toggle('active', parseInt(el.dataset.n)===n);
+  });
+  if(selectedModel) selectModel(selectedModel, lastSelectedQuant);
+}
+
 async function selectModel(modelId,quantBits){
-  selectedModel=modelId;renderModels();
-  try{const res=await fetch(`${API_BASE}/api/plan/${modelId}?quant_bits=${quantBits}`);if(!res.ok)return;renderPlan(await res.json());}catch(_){}
+  selectedModel=modelId;lastSelectedQuant=quantBits;renderModels();
+  document.getElementById('sharding-container').style.display='block';
+  document.getElementById('plan-error').style.display='none';
+  try{
+    const url=`${API_BASE}/api/plan/${modelId}?quant_bits=${quantBits}&sharding_mode=${shardingMode}&min_nodes=${minNodes}`;
+    const res=await fetch(url);
+    if(!res.ok){
+      const err=await res.json().catch(()=>({detail:'Could not generate a plan for this configuration.'}));
+      document.getElementById('plan-container').style.display='none';
+      document.getElementById('plan-error-text').textContent=err.detail||'Could not generate a plan.';
+      document.getElementById('plan-error').style.display='block';
+      return;
+    }
+    renderPlan(await res.json());
+  }catch(_){}
 }
 function renderPlan(plan){
   const container=document.getElementById('plan-container');container.style.display='block';
   document.getElementById('plan-title').textContent=`${plan.model_id} — layer distribution`;
-  document.getElementById('plan-meta').textContent=`${plan.total_layers} layers · ${plan.total_params_b}B · Q${plan.quant_bits} · ${plan.node_count} node(s)`;
+  document.getElementById('plan-meta').textContent=`${plan.total_layers} layers · ${plan.total_params_b}B · Q${plan.quant_bits} · ${plan.node_count} node(s) · ${plan.sharding_mode}`;
   document.getElementById('plan-assignments').innerHTML=(plan.assignments||[]).map((a,i)=>{
     const color=COLORS[i%COLORS.length];
     const pct=Math.round(a.layer_count/plan.total_layers*100);
@@ -1352,7 +1462,7 @@ setTimeout(()=>{
   if(!peers.length){
     fetch(API_BASE+'/api/cluster').then(r=>r.json()).then(d=>{
       peers=d.peers||[];
-      renderClusterViz();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();
+      renderClusterViz();renderNodeTable();renderHardware();updateSidebar();updateHeaderStats();fetchModels();renderMiniCluster();updateMinNodesDots();
     }).catch(()=>{});
   }
 },1200);
