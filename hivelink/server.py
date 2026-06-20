@@ -163,6 +163,16 @@ async def dashboard():
     return HTMLResponse("<h2>Dashboard not found.</h2>", status_code=404)
 
 
+# Browsers request /favicon.ico automatically before the page's own <link rel="icon">
+# tag is even parsed — without this route that request 404s in the console on every
+# load. Respond with no content rather than an error; the real favicon (matching the
+# HiveLink hexagon logo) is set via the SVG data-URI <link> tag in the HTML itself.
+@app.get("/favicon.ico")
+async def favicon():
+    from fastapi import Response
+    return Response(status_code=204)
+
+
 @app.websocket("/ws/cluster")
 async def ws_cluster(websocket: WebSocket):
     await websocket.accept()
