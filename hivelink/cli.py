@@ -24,18 +24,65 @@ app     = typer.Typer(
 console = Console()
 
 
+def _ensure_ollama_running() -> None:
+    """
+    If Ollama is installed but not running, start it in the background so the
+    user doesn't have to remember a separate `ollama serve` step every time.
+    Silent no-op if Ollama isn't installed, or is already running, or fails to
+    start for any reason — this is a convenience, never a hard requirement.
+    """
+    import shutil
+    import subprocess
+    import httpx
+
+    # Already running? Nothing to do.
+    try:
+        httpx.get("http://127.0.0.1:11434/api/tags", timeout=1)
+        return
+    except Exception:
+        pass
+
+    ollama_bin = shutil.which("ollama")
+    if not ollama_bin:
+        return  # Ollama not installed — nothing to auto-start
+
+    try:
+        if platform.system().lower() == "windows":
+            # DETACHED_PROCESS + no console window so it doesn't open a visible
+            # terminal or get killed when this process exits.
+            subprocess.Popen(
+                [ollama_bin, "serve"],
+                creationflags=0x00000008 | 0x08000000,  # DETACHED_PROCESS | CREATE_NO_WINDOW
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.Popen(
+                [ollama_bin, "serve"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,  # detach from this process group on Mac/Linux
+            )
+        console.print("[dim]Ollama wasn't running — started it in the background.[/]")
+    except Exception as e:
+        console.print(f"[dim]Couldn't auto-start Ollama ({e}) — start it manually with `ollama serve` if needed.[/]")
+
+
 @app.command()
 def start(
-    port:   int      = typer.Option(47730,    "--port",   "-p", help="API server port"),
-    host:   str      = typer.Option("0.0.0.0","--host",         help="Bind host"),
-    reload: bool     = typer.Option(False,    "--reload",        help="Dev mode auto-reload"),
-    peer:   list[str]= typer.Option([],       "--peer",   "-P",  help="Static peer IP[:port] — use when UDP discovery can't cross subnets. Can repeat: --peer 192.168.1.112 --peer 10.0.0.5"),
+    port:        int      = typer.Option(47730,    "--port",   "-p", help="API server port"),
+    host:        str      = typer.Option("0.0.0.0","--host",         help="Bind host"),
+    reload:      bool     = typer.Option(False,    "--reload",        help="Dev mode auto-reload"),
+    peer:        list[str]= typer.Option([],       "--peer",   "-P",  help="Static peer IP[:port] — use when UDP discovery can't cross subnets. Can repeat: --peer 192.168.1.112 --peer 10.0.0.5"),
+    auto_ollama: bool     = typer.Option(True,      "--auto-ollama/--no-auto-ollama", help="Automatically start Ollama in the background if it's installed but not running"),
 ):
     """Start the HiveLink node. Joins the cluster via UDP discovery or static peers."""
     os.environ["HIVELINK_PORT"] = str(port)
     if peer:
         os.environ["HIVELINK_PEERS"] = ",".join(peer)
         console.print(f"[dim]Static peers:[/] {', '.join(peer)}")
+
+    if auto_ollama:
+        _ensure_ollama_running()
+
     console.print(f"\n[bold green]HiveLink[/] starting on [cyan]http://{host}:{port}[/]")
     console.print(f"Dashboard: [cyan]http://localhost:{port}[/]\n")
     uvicorn.run(
