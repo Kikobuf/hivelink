@@ -81,9 +81,13 @@ def status(port: int = typer.Option(47730, "--port", "-p")):
                   f"Total TFLOPS: [bold]{data['total_tflops']}[/]")
 
 
-@app.command()
-def models(port: int = typer.Option(47730, "--port", "-p")):
-    """List models this cluster can run."""
+models_app = typer.Typer(help="List, pull, and remove models")
+app.add_typer(models_app, name="models")
+
+
+@models_app.command(name="list")
+def models_list(port: int = typer.Option(47730, "--port", "-p")):
+    """List models this cluster can run, and their state (live / cached / pullable)."""
     import httpx
     try:
         data = httpx.get(f"http://localhost:{port}/api/models", timeout=3).json()
@@ -91,16 +95,60 @@ def models(port: int = typer.Option(47730, "--port", "-p")):
         rprint("[red]Cannot connect to HiveLink.[/]")
         raise typer.Exit(1)
 
-    table = Table(title="Runnable Models")
+    table = Table(title="Models")
     table.add_column("Model")
+    table.add_column("State")
     table.add_column("Params",  justify="right")
     table.add_column("Quant")
     table.add_column("Size",    justify="right")
 
     for m in data["models"]:
-        table.add_row(m["model_id"], f"{m['params_b']:.0f}B",
+        if m.get("live"):
+            state = "[green]● live[/]"
+        elif m.get("cached"):
+            state = "[cyan]⬇ cached[/]"
+        else:
+            state = "[dim]pullable[/]"
+        table.add_row(m["model_id"], state, f"{m['params_b']:.1f}B",
                       f"Q{m['quant_bits']}", f"{m['size_mb']:,} MB")
     console.print(table)
+
+
+@models_app.command(name="remove")
+def models_remove(
+    model_id: str = typer.Argument(..., help="Model to remove, e.g. llama3.2, qwen2.5:7b"),
+    port:     int = typer.Option(47730, "--port", "-p"),
+    yes:      bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+):
+    """Remove a cached model from this node to free up disk space."""
+    import httpx
+
+    if not yes:
+        confirm = typer.confirm(f"Remove '{model_id}' from this node?")
+        if not confirm:
+            rprint("[dim]Cancelled.[/]")
+            raise typer.Exit(0)
+
+    try:
+        resp = httpx.delete(f"http://localhost:{port}/api/models/{model_id}", timeout=15)
+        if resp.status_code == 200:
+            console.print(f"[green]✓[/] Removed [cyan]{model_id}[/]")
+        elif resp.status_code == 503:
+            rprint("[red]Ollama is not running on this node.[/]")
+            raise typer.Exit(1)
+        else:
+            rprint(f"[red]Failed to remove model — server returned {resp.status_code}[/]")
+            raise typer.Exit(1)
+    except httpx.ConnectError:
+        rprint("[red]Cannot connect to HiveLink. Is it running?[/]")
+        raise typer.Exit(1)
+
+
+# Backwards-compatible alias: `hivelink models` with no subcommand behaves like `models list`
+@app.command(name="models", hidden=True)
+def models_legacy(port: int = typer.Option(47730, "--port", "-p")):
+    """(Deprecated alias — use `hivelink models list`)"""
+    models_list(port=port)
 
 
 @app.command()

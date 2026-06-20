@@ -39,15 +39,49 @@
 
 ---
 
-## 🔨 v0.3 — Model management (next)
+## ✅ v0.3 — Model management (done)
 
-> Goal: `hivelink pull llama3-70b` just works, no manual file hunting.
+> Goal: `hivelink pull llama3.2` just works, no manual file hunting.
 
-- [ ] `hivelink pull <model>` — downloads GGUF from Hugging Face Hub with progress bar
-- [ ] Model file streaming — store model on coordinator, nodes pull only their assigned layer slice over LAN (eliminates need to copy model to every machine)
-- [ ] Model cache management — `hivelink models list`, `hivelink models remove <model>`
-- [ ] Auto-detect locally cached Ollama and LM Studio models
-- [ ] Model card shows download button in dashboard if not yet cached
+- [x] `hivelink pull <model>` — CLI command, proxies to `ollama pull` with live progress
+- [x] Dashboard "Pull model" button — modal with live download progress bar, streamed from Ollama's native pull API
+- [x] Auto-detect cached Ollama models — `/api/tags` integration, dashboard shows live / cached / pullable states distinctly
+- [x] Model cache management — `hivelink models list` (with state column), `hivelink models remove <model>` (with confirmation prompt, `--yes` to skip)
+- [x] Model card shows download button directly in Models tab for any known-but-not-cached model — click opens the Pull modal pre-filled with that model name
+
+---
+
+## 🔨 v0.3.5 — Model sync across cluster (next)
+
+> Goal: pull a model once on the fastest/most-connected node, automatically sync it to every other node that needs it for a cluster-split run — instead of manually running `ollama pull` on each machine separately.
+>
+> **Scope note:** this is the "full-copy + per-node layer loading" approach, not byte-level GGUF slicing. Each node still ends up with a complete local copy of the model file; the win is automating the copy + verifying it's ready, not reducing total bytes transferred. True partial-file streaming (only sending each node its assigned layer bytes) is a much larger, riskier effort — tracked separately below as a research item, not committed here.
+
+**Why full-copy-and-sync instead of true partial streaming:**
+- GGUF is one binary blob with all layers concatenated; slicing it into a valid, independently-loadable partial file requires deep handling of GGUF's tensor index format and varies by model architecture — high effort, high risk of subtle corruption bugs
+- Full-copy sync solves the actual pain point today (manually pulling the same model 2+ times on different machines) without that risk
+- llama.cpp / Ollama already support loading only a layer *range* into GPU memory at runtime (`--n-gpu-layers` style controls) once the full file is present locally — so the "only this node's assigned layers get loaded" behavior is achievable without needing the file itself to be pre-sliced
+
+**Scoped work:**
+- [ ] Node-to-node file transfer — chunked HTTP transfer between HiveLink instances (new endpoint, e.g. `GET /api/model-blob/{model_id}` streamed from whichever node has it cached)
+- [ ] Resume-on-failure — large models (20–40GB+) will hit network interruptions; transfer needs to resume from last-good chunk, not restart from zero
+- [ ] Checksum verification — SHA256 the transferred file against the source node's copy before marking it usable; a silently corrupted weight file produces garbage output with no obvious error
+- [ ] "Sync to cluster" button in dashboard — pick a cached model, see which connected nodes don't have it yet, push a one-click sync with live per-node progress bars
+- [ ] Storage path + cleanup — consistent local storage location across platforms, plus a way to free disk space from models no longer in use
+- [ ] CLI equivalent: `hivelink sync <model>` — mirrors the dashboard button for terminal use
+
+**Estimated effort:** ~2–3 days of focused work. Self-contained — doesn't block or get blocked by other roadmap items.
+
+---
+
+## 🔬 v0.3.6 — True partial-file model streaming (research item, not committed)
+
+> Goal (aspirational): each node downloads *only* the bytes for its assigned layers, not the full model file — real bandwidth and disk savings for very large models split across many nodes.
+
+- [ ] Investigate GGUF tensor index format well enough to determine whether a valid partial file (containing only a layer subset + a rewritten index) can be constructed reliably
+- [ ] Prototype against one well-understood architecture (e.g. Llama family) before generalizing
+- [ ] Decision point after prototype: pursue as a real feature, or formally close out as "not pursuing, full-copy sync is sufficient" with reasoning recorded here
+- [ ] If pursued: needs its own dedicated milestone — this entry is scoping/research only, not a commitment
 
 ---
 

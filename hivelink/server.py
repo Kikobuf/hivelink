@@ -467,6 +467,22 @@ async def pull_model(req: PullRequest):
     )
 
 
+@app.delete("/api/models/{model_id:path}")
+async def delete_model(model_id: str):
+    """Remove a cached model from this node via Ollama's native delete API."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.request(
+                "DELETE", "http://127.0.0.1:11434/api/delete",
+                json={"model": model_id},
+            )
+            if resp.status_code == 200:
+                return {"status": "deleted", "model_id": model_id}
+            raise HTTPException(resp.status_code, f"Ollama returned {resp.status_code}")
+    except httpx.ConnectError:
+        raise HTTPException(503, "Ollama not running on port 11434")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "node_id": _node_id[:8], "ts": time.time()}

@@ -150,6 +150,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
 .model-card:hover{border-color:var(--border2);background:var(--surface2)}
 .model-card.selected{border-color:var(--accent)}
+.model-card.not-cached{cursor:default}
+.model-card.not-cached:hover{border-color:var(--border)}
+.model-download-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:10px;flex-shrink:0}
+.model-download-btn:hover{background:#1f6feb}
 .model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
 .model-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -1079,13 +1083,28 @@ function renderModels(){
     if(m.live)        pill=`<span class="live-pill">● live</span>`;
     else if(m.cached) pill=`<span class="cached-pill">⬇ cached</span>`;
     else              pill=`<span class="quant-pill">Q${m.quant_bits}</span>`;
-    return`<div class="model-card${sel}" onclick="selectModel('${m.model_id}',${m.quant_bits||4})">
+    const clickHandler = m.cached
+      ? `onclick="selectModel('${m.model_id}',${m.quant_bits||4})"`
+      : '';
+    const downloadBtn = !m.cached
+      ? `<button class="model-download-btn" onclick="event.stopPropagation();quickPull('${m.model_id}')" title="Pull this model">
+           <i class="fa-solid fa-download"></i>
+         </button>`
+      : '';
+    return`<div class="model-card${sel}${m.cached?'':' not-cached'}" ${clickHandler}>
       <div class="model-header-row"><div class="model-logo" style="background:${meta.bg}">${meta.icon}</div>
-        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b+'B params':'loaded'}</div></div>${pill}</div>
+        <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b.toFixed(1)+'B params':'loaded'}</div></div>${pill}</div>
       <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="model-footer"><span class="model-size">${sz}</span><span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span></div>
+      <div class="model-footer"><span class="model-size">${sz}</span>
+        ${downloadBtn || `<span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span>`}
+      </div>
     </div>`;
   }).join('');
+}
+
+function quickPull(modelId){
+  openPullModal();
+  document.getElementById('pull-model-input').value=modelId;
 }
 async function selectModel(modelId,quantBits){
   selectedModel=modelId;renderModels();
