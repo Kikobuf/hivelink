@@ -24,16 +24,33 @@ app     = typer.Typer(
 console = Console()
 
 
+def _hivelink_log_dir() -> Path:
+    """Consistent, discoverable log directory across platforms."""
+    if platform.system().lower() == "windows":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    else:
+        base = Path.home() / ".hivelink"
+    log_dir = base / "HiveLink" / "logs" if platform.system().lower() == "windows" else base / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
 def _ensure_ollama_running() -> None:
     """
     If Ollama is installed but not running, start it in the background so the
     user doesn't have to remember a separate `ollama serve` step every time.
     Silent no-op if Ollama isn't installed, or is already running, or fails to
     start for any reason — this is a convenience, never a hard requirement.
+
+    Ollama's stdout/stderr are redirected to real log files (not DEVNULL) so
+    that any future startup or runtime error is actually debuggable instead
+    of silently disappearing — this is what made an earlier issue invisible
+    until we went digging for it manually.
     """
     import shutil
     import subprocess
     import httpx
+    from datetime import datetime
 
     # Already running? Nothing to do.
     try:
@@ -46,7 +63,12 @@ def _ensure_ollama_running() -> None:
     if not ollama_bin:
         return  # Ollama not installed — nothing to auto-start
 
+    log_dir   = _hivelink_log_dir()
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_path  = log_dir / f"ollama-{timestamp}.log"
+
     try:
+        log_file = open(log_path, "w", encoding="utf-8")
         if platform.system().lower() == "windows":
             # CREATE_NO_WINDOW alone (not combined with DETACHED_PROCESS — that
             # combination causes a repeated console flash-open/close loop on
@@ -55,17 +77,17 @@ def _ensure_ollama_running() -> None:
             subprocess.Popen(
                 [ollama_bin, "serve"],
                 creationflags=CREATE_NO_WINDOW,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdout=log_file, stderr=subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
                 close_fds=True,
             )
         else:
             subprocess.Popen(
                 [ollama_bin, "serve"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdout=log_file, stderr=subprocess.STDOUT,
                 start_new_session=True,  # detach from this process group on Mac/Linux
             )
-        console.print("[dim]Ollama wasn't running — started it in the background.[/]")
+        console.print(f"[dim]Ollama wasn't running — started it in the background. Logs: {log_path}[/]")
     except Exception as e:
         console.print(f"[dim]Couldn't auto-start Ollama ({e}) — start it manually with `ollama serve` if needed.[/]")
 
@@ -354,6 +376,31 @@ def pull(
         rprint("[dim]HiveLink is running but found no engine — once Ollama is installed "
                "and this model is pulled, it'll be auto-detected within a few seconds.[/]")
     raise typer.Exit(1)
+
+
+@app.command()
+def logs(
+    tail: int = typer.Option(60, "--tail", "-n", help="Number of lines to show from the end"),
+):
+    """Show the most recent auto-started Ollama log (for debugging crashes or hangs)."""
+    log_dir = _hivelink_log_dir()
+    log_files = sorted(log_dir.glob("ollama-*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+    if not log_files:
+        rprint(f"[yellow]No Ollama logs found in {log_dir}[/]")
+        rprint("[dim]This is expected if Ollama was already running when `hivelink start` ran "
+               "(we only log Ollama instances we auto-started ourselves).[/]")
+        raise typer.Exit(0)
+
+    latest = log_files[0]
+    console.print(f"[dim]Showing last {tail} lines of {latest}[/]\n")
+    try:
+        lines = latest.read_text(encoding="utf-8", errors="replace").splitlines()
+        for line in lines[-tail:]:
+            console.print(line)
+    except Exception as e:
+        rprint(f"[red]Could not read log file: {e}[/]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
