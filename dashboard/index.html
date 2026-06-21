@@ -1368,7 +1368,7 @@ function formatMessage(text){
 
   for(const raw of lines){
     const line=raw;
-    const bulletMatch=line.match(/^\s*[-•]\s+(.+)$/);
+    const bulletMatch=line.match(/^\s*[-•*]\s+(.+)$/);
     const numberMatch=line.match(/^\s*\d+\.\s+(.+)$/);
     if(bulletMatch){
       if(listType&&listType!=='ul')flushList();
