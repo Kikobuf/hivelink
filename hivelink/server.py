@@ -391,7 +391,7 @@ async def get_plan(
 
 class Message(BaseModel):
     role: str
-    content: str
+    content: str | list  # str for text, list for multimodal (image_url + text blocks)
 
 
 class ChatRequest(BaseModel):

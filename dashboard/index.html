@@ -1945,7 +1945,10 @@ async function sendMessage(){
     });
     if(!res.ok){
       const err=await res.json().catch(()=>({detail:'Unknown error'}));
-      replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(err.detail||res.statusText)}</span>`;
+      const errMsg = typeof err.detail === 'string' ? err.detail
+        : Array.isArray(err.detail) ? err.detail.map(e=>e.msg||JSON.stringify(e)).join('; ')
+        : JSON.stringify(err.detail||err);
+      replyDiv.innerHTML=`<span style="color:var(--red)">Error: ${escapeHtml(errMsg)}</span>`;
     }else{
       const reader=res.body.getReader(),decoder=new TextDecoder();
       while(true){
