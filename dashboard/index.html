@@ -155,6 +155,26 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-card.not-cached:hover{border-color:var(--border)}
 .model-download-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:10px;flex-shrink:0}
 .model-download-btn:hover{background:#1f6feb}
+.model-sync-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;font-size:10px;flex-shrink:0}
+.model-sync-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Sync modal */
+.sync-modal{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:480px;max-width:90vw;max-height:80vh;overflow:hidden;display:flex;flex-direction:column}
+.sync-modal-body{padding:18px;overflow-y:auto}
+.sync-target-row{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px}
+.sync-target-row:last-child{margin-bottom:0}
+.sync-target-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sync-target-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sync-target-status{font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:3px}
+.sync-target-status.pending{background:var(--surface3);color:var(--muted)}
+.sync-target-status.downloading{background:#2f81f718;color:var(--accent)}
+.sync-target-status.resuming{background:#d2992218;color:var(--amber)}
+.sync-target-status.verifying{background:#a371f718;color:var(--purple)}
+.sync-target-status.complete{background:#3fb95018;color:var(--green)}
+.sync-target-status.error{background:#f8514918;color:var(--red)}
+.sync-target-progress-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.sync-target-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s ease}
+.sync-target-detail{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
 /* Sharding controls */
 .sharding-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600}
 .sharding-toggle-group{display:flex;gap:6px}
@@ -562,6 +582,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
   </div>
 </div>
+
+<!-- Sync to cluster modal -->
+<div class="pull-modal-overlay" id="sync-modal-overlay" onclick="if(event.target===this)closeSyncModal()">
+  <div class="sync-modal">
+    <div class="pull-modal-header">
+      <span class="pull-modal-title" id="sync-modal-title">Sync to cluster</span>
+      <button class="pull-modal-close" onclick="closeSyncModal()">✕</button>
+    </div>
+    <div class="sync-modal-body" id="sync-modal-body">
+      <!-- populated by openSyncModal() -->
+    </div>
+    <div class="pull-modal-footer">
+      <button class="pull-cancel-btn" onclick="closeSyncModal()" id="sync-close-btn">Close</button>
+      <button class="pull-go-btn" id="sync-go-btn" onclick="startSync()">Start sync</button>
+    </div>
+  </div>
+</div>
 </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -644,6 +681,15 @@ function connect(){
         nodeStats[msg.node_id]=msg.stats;
         updateExoNodeStats(msg.node_id,msg.stats);
         renderMiniCluster();
+      }
+      if(msg.type==='sync_progress'){
+        handleSyncProgress(msg);
+      }
+      if(msg.type==='sync_complete'){
+        handleSyncComplete(msg);
+      }
+      if(msg.type==='sync_all_complete'){
+        handleSyncAllComplete(msg);
       }
     }catch(_){}
   };
@@ -1029,6 +1075,113 @@ function openPullModal(){
 function closePullModal(){
   document.getElementById('pull-modal-overlay').classList.remove('open');
 }
+
+// ── Sync to cluster modal ───────────────────────────────────────────────────
+let syncModelId=null;
+let syncTargets={}; // node_id -> {hostname, status, bytes, total, detail}
+
+function openSyncModal(modelId){
+  syncModelId=modelId;
+  syncTargets={};
+  document.getElementById('sync-modal-title').textContent=`Sync ${modelId} to cluster`;
+  document.getElementById('sync-modal-overlay').classList.add('open');
+  document.getElementById('sync-go-btn').style.display='inline-block';
+  document.getElementById('sync-go-btn').disabled=false;
+  document.getElementById('sync-go-btn').textContent='Start sync';
+
+  const otherPeers=peers.filter(p=>!p.is_self);
+  syncTargets={};
+  otherPeers.forEach(p=>{
+    syncTargets[p.node_id]={
+      hostname: p.hostname||p.node_id.slice(0,12),
+      os: p.hardware?.node_os,
+      status: 'pending', bytes: 0, total: 0, detail: '',
+    };
+  });
+  renderSyncModalBody();
+}
+
+function closeSyncModal(){
+  document.getElementById('sync-modal-overlay').classList.remove('open');
+  syncModelId=null;
+}
+
+function renderSyncModalBody(){
+  const body=document.getElementById('sync-modal-body');
+  const ids=Object.keys(syncTargets);
+  if(!ids.length){
+    body.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0">No other nodes connected to sync to.</div>';
+    return;
+  }
+  body.innerHTML=ids.map(nodeId=>{
+    const t=syncTargets[nodeId];
+    const pct=t.total>0?Math.round(t.bytes/t.total*100):0;
+    const osLabel={darwin:'macOS',windows:'Windows',linux:'Linux'}[t.os]||'Node';
+    return `<div class="sync-target-row" data-node-id="${nodeId}">
+      <div class="sync-target-header">
+        <span class="sync-target-name">${osIcon(t.os)} ${osLabel} · ${t.hostname}</span>
+        <span class="sync-target-status ${t.status}">${t.status}</span>
+      </div>
+      <div class="sync-target-progress-track"><div class="sync-target-progress-fill" style="width:${pct}%"></div></div>
+      <div class="sync-target-detail">${t.total>0?(t.bytes/(1024**3)).toFixed(2)+' / '+(t.total/(1024**3)).toFixed(2)+' GB':t.detail||'Waiting to start…'}</div>
+    </div>`;
+  }).join('');
+}
+
+async function startSync(){
+  if(!syncModelId)return;
+  document.getElementById('sync-go-btn').disabled=true;
+  document.getElementById('sync-go-btn').textContent='Syncing…';
+
+  try{
+    const res=await fetch(`${API_BASE}/api/sync/start`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model_id:syncModelId})
+    });
+    const data=await res.json();
+    if(data.status==='no_targets'){
+      document.getElementById('sync-go-btn').textContent='No targets';
+      return;
+    }
+    if(!res.ok){
+      alert('Failed to start sync: '+(data.detail||'unknown error'));
+      document.getElementById('sync-go-btn').disabled=false;
+      document.getElementById('sync-go-btn').textContent='Start sync';
+      return;
+    }
+    // Progress now arrives via the existing WebSocket (sync_progress / sync_complete handlers below)
+  }catch(e){
+    alert('Failed to start sync: '+e.message);
+    document.getElementById('sync-go-btn').disabled=false;
+    document.getElementById('sync-go-btn').textContent='Start sync';
+  }
+}
+
+function handleSyncProgress(msg){
+  // msg.node_id is the node REPORTING progress (the destination doing the pulling)
+  const t=syncTargets[msg.node_id];
+  if(!t)return;
+  const p=msg.progress;
+  t.status=p.status;
+  t.bytes=p.bytes_written;
+  t.total=p.blob_total_bytes;
+  t.detail=p.detail||'';
+  if(syncModelId) renderSyncModalBody();
+}
+
+function handleSyncComplete(msg){
+  const t=syncTargets[msg.target_node_id];
+  if(t){
+    t.status=msg.status; // "complete" or "failed"
+    if(msg.status==='complete'){ t.bytes=t.total||1; }
+  }
+  if(syncModelId) renderSyncModalBody();
+}
+
+function handleSyncAllComplete(msg){
+  document.getElementById('sync-go-btn').style.display='none';
+  fetchModels(); // refresh model list — other nodes should now show this model as cached
+}
 function resetPullModal(){
   document.getElementById('pull-progress-wrap').classList.remove('active');
   document.getElementById('pull-error').classList.remove('active');
@@ -1150,12 +1303,21 @@ function renderModels(){
            <i class="fa-solid fa-download"></i>
          </button>`
       : '';
+    const otherNodeCount = peers.filter(p=>!p.is_self).length;
+    const syncBtn = (m.cached && otherNodeCount > 0)
+      ? `<button class="model-sync-btn" onclick="event.stopPropagation();openSyncModal('${m.model_id}')" title="Sync to other nodes in the cluster">
+           <i class="fa-solid fa-arrows-rotate"></i>
+         </button>`
+      : '';
     return`<div class="model-card${sel}${m.cached?'':' not-cached'}" ${clickHandler}>
       <div class="model-header-row"><div class="model-logo" style="background:${meta.bg}">${meta.icon}</div>
         <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b.toFixed(1)+'B params':'loaded'}</div></div>${pill}</div>
       <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="model-footer"><span class="model-size">${sz}</span>
-        ${downloadBtn || `<span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span>`}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${syncBtn}
+          ${downloadBtn || `<span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span>`}
+        </div>
       </div>
     </div>`;
   }).join('');

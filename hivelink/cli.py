@@ -379,6 +379,88 @@ def pull(
 
 
 @app.command()
+def sync(
+    model_id: str = typer.Argument(..., help="Model to sync, e.g. qwen2.5:32b — must already be pulled on THIS node"),
+    port:     int = typer.Option(47730, "--port", "-p", help="HiveLink API port"),
+    watch:    bool = typer.Option(True, "--watch/--no-watch", help="Show live progress (requires this command to keep running)"),
+):
+    """
+    Sync a model from this node to every other connected node that doesn't
+    have it yet — so you don't have to manually `ollama pull` the same
+    model on each machine separately.
+
+    The model must already be pulled on THIS node first (`hivelink pull`).
+    Sync runs over your LAN with automatic resume if the connection drops
+    partway through a large transfer.
+    """
+    import httpx
+    import websockets
+    import asyncio
+
+    try:
+        resp = httpx.post(f"http://localhost:{port}/api/sync/start", json={"model_id": model_id}, timeout=10)
+    except httpx.ConnectError:
+        rprint("[red]Cannot connect to HiveLink. Is it running?[/]")
+        raise typer.Exit(1)
+
+    if resp.status_code == 404:
+        rprint(f"[red]{model_id} isn't pulled on this node yet.[/] Run [cyan]hivelink pull {model_id}[/] first.")
+        raise typer.Exit(1)
+    if resp.status_code != 200:
+        rprint(f"[red]Failed to start sync: {resp.text}[/]")
+        raise typer.Exit(1)
+
+    data = resp.json()
+    if data.get("status") == "no_targets":
+        console.print("[dim]No other connected nodes to sync to — nothing to do.[/]")
+        raise typer.Exit(0)
+
+    target_count = data.get("target_count", 0)
+    console.print(f"[bold]Syncing[/] [cyan]{model_id}[/] to [bold]{target_count}[/] node(s)...\n")
+
+    if not watch:
+        console.print("[dim]Sync started in the background. Check the dashboard for progress.[/]")
+        return
+
+    async def watch_progress():
+        uri = f"ws://localhost:{port}/ws/cluster"
+        completed_targets = set()
+        try:
+            async with websockets.connect(uri) as ws:
+                while len(completed_targets) < target_count:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=600)
+                    msg = json.loads(raw)
+                    if msg.get("type") == "sync_progress":
+                        p = msg["progress"]
+                        pct = round(p["bytes_written"] / max(p["blob_total_bytes"], 1) * 100)
+                        status_color = {"downloading": "cyan", "resuming": "yellow",
+                                        "verifying": "blue", "complete": "green", "error": "red"}.get(p["status"], "white")
+                        console.print(
+                            f"  [{status_color}]{p['status']:12s}[/] "
+                            f"{p['bytes_written']/(1024**3):.2f}GB / {p['blob_total_bytes']/(1024**3):.2f}GB "
+                            f"({pct}%)  digest={p['blob_digest'][:18]}...", end="\r"
+                        )
+                    elif msg.get("type") == "sync_complete":
+                        completed_targets.add(msg["target_node_id"])
+                        console.print()
+                        status_icon = "[green]✓[/]" if msg["status"] == "complete" else "[red]✗[/]"
+                        console.print(f"{status_icon} Node {msg['target_node_id'][:12]}... — {msg['status']}")
+                    elif msg.get("type") == "sync_all_complete":
+                        break
+        except asyncio.TimeoutError:
+            rprint("\n[yellow]No progress updates received for a while — check the dashboard.[/]")
+        except Exception as e:
+            rprint(f"\n[yellow]Lost connection while watching progress: {e}[/]")
+
+    import json
+    try:
+        asyncio.run(watch_progress())
+        console.print("\n[bold green]Sync complete.[/]")
+    except KeyboardInterrupt:
+        console.print("\n[dim]Stopped watching — sync continues in the background.[/]")
+
+
+@app.command()
 def logs(
     tail: int = typer.Option(60, "--tail", "-n", help="Number of lines to show from the end"),
 ):

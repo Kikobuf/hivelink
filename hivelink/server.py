@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
@@ -35,6 +35,7 @@ from .discovery import DiscoveryService, PeerInfo
 from .hardware import HardwareProfile, detect as detect_hardware
 from .scheduler import MODEL_SPECS, assign_layers, can_run_model
 from .stats import collect as collect_stats, NodeStats
+from . import sync as model_sync
 
 logger = logging.getLogger(__name__)
 
@@ -516,3 +517,226 @@ async def delete_model(model_id: str):
 @app.get("/health")
 async def health():
     return {"status": "ok", "node_id": _node_id[:8], "ts": time.time()}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Model sync (v0.3.5) — endpoints used by hivelink.sync for node-to-node
+# blob transfer. See hivelink/sync.py module docstring for the full design.
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/sync/blob/{digest:path}")
+async def sync_serve_blob(digest: str, request: Request):
+    """
+    Source side: stream a (possibly partial, via Range header) blob to a
+    peer node that's pulling it from us. This is the endpoint hivelink.sync's
+    pull_blob_from_peer() hits.
+    """
+    from fastapi import Request as _Request  # already imported above; explicit for clarity
+    blob_path = model_sync._blob_path(digest)
+    if not blob_path.exists():
+        raise HTTPException(404, f"Blob {digest} not present on this node")
+
+    total_size = blob_path.stat().st_size
+    range_header = request.headers.get("range")
+    start, end = 0, total_size - 1
+    status_code = 200
+    if range_header:
+        try:
+            range_val = range_header.replace("bytes=", "")
+            parts = range_val.split("-")
+            start = int(parts[0]) if parts[0] else 0
+            end = int(parts[1]) if len(parts) > 1 and parts[1] else total_size - 1
+            status_code = 206
+        except ValueError:
+            pass  # malformed range header — just serve the whole thing
+
+    async def gen():
+        with open(blob_path, "rb") as f:
+            f.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                chunk = f.read(min(4 * 1024 * 1024, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+                await asyncio.sleep(0)
+
+    headers = {}
+    if range_header:
+        headers["Content-Range"] = f"bytes {start}-{end}/{total_size}"
+        headers["Accept-Ranges"] = "bytes"
+    return StreamingResponse(gen(), status_code=status_code, headers=headers)
+
+
+class CheckMissingRequest(BaseModel):
+    blobs: list[dict]  # [{"digest":..., "size":..., "media_type":...}, ...]
+
+
+@app.post("/api/sync/check-missing")
+async def sync_check_missing(req: CheckMissingRequest):
+    """Destination side: given a list of blobs a source node has, tell it
+    which ones we're actually missing (so shared blobs between model
+    variants don't get needlessly re-transferred)."""
+    missing = []
+    for b in req.blobs:
+        complete, _ = model_sync.local_blob_status(b["digest"], b["size"])
+        if not complete:
+            missing.append(b["digest"])
+    return {"missing_digests": missing}
+
+
+class PullBlobRequest(BaseModel):
+    digest: str
+    size: int
+    source_ip: str
+    source_port: int
+
+
+@app.post("/api/sync/pull-blob")
+async def sync_pull_blob(req: PullBlobRequest):
+    """
+    Destination side: the source node calls this to tell us "go pull blob X
+    from yourself" — we then actively fetch it (with resume support) and
+    report back success/failure. Broadcasts progress over our own WebSocket
+    so any connected dashboard sees live sync progress.
+    """
+    async def on_progress(p: model_sync.SyncProgress):
+        if _ws_clients:
+            await _send_to_all(json.dumps({
+                "type": "sync_progress",
+                "node_id": _node_id,
+                "progress": p.to_dict(),
+                "ts": time.time(),
+            }))
+
+    ok = await model_sync.pull_blob_from_peer(
+        digest=req.digest, expected_size=req.size,
+        source_ip=req.source_ip, source_port=req.source_port,
+        on_progress=on_progress,
+    )
+    return {"success": ok}
+
+
+class WriteManifestRequest(BaseModel):
+    model_id: str
+    manifest: dict
+
+
+@app.post("/api/sync/write-manifest")
+async def sync_write_manifest(req: WriteManifestRequest):
+    """Destination side: once all blobs for a model are synced, write its
+    manifest locally so Ollama recognizes the model as available without
+    needing a separate `ollama pull`."""
+    try:
+        model_sync.write_manifest(req.model_id, req.manifest)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to write manifest: {e}")
+
+
+class SyncToClusterRequest(BaseModel):
+    model_id: str
+    target_node_ids: list[str] | None = None  # None = sync to all peers missing it
+
+
+@app.post("/api/sync/start")
+async def sync_start(req: SyncToClusterRequest, background_tasks: BackgroundTasks):
+    """
+    Coordinator endpoint: kick off syncing a model FROM this node TO every
+    other connected peer that doesn't have it yet (or to specific target
+    node_ids if provided). Runs in the background; progress is broadcast
+    over the WebSocket as sync_progress / sync_complete messages so the
+    dashboard can show a live "Sync to cluster" progress UI.
+    """
+    if not _discovery:
+        raise HTTPException(503, "Discovery not running")
+
+    blobs = model_sync.read_manifest_blobs(req.model_id)
+    if not blobs:
+        raise HTTPException(404, f"Model {req.model_id} not found locally on this node — pull it here first")
+
+    peers = [p for p in _discovery.active_peers() if not p.is_self]
+    if req.target_node_ids:
+        peers = [p for p in peers if p.node_id in req.target_node_ids]
+
+    if not peers:
+        return {"status": "no_targets", "detail": "No other connected nodes to sync to"}
+
+    async def run_sync():
+        results = {}
+        for peer in peers:
+            target_ip = peer.hostname  # peer.hostname holds the IP in our PeerInfo model
+            target_port = peer.api_port
+            try:
+                ok = await model_sync.sync_model_to_peer(
+                    model_id=req.model_id,
+                    target_ip=target_ip, target_port=target_port,
+                    this_node_ip=_local_ip_for_peer_announce(), this_node_port=API_PORT,
+                )
+                results[peer.node_id] = "complete" if ok else "failed"
+            except Exception as e:
+                logger.error("Sync to %s failed: %s", peer.node_id[:8], e)
+                results[peer.node_id] = "failed"
+
+            if _ws_clients:
+                await _send_to_all(json.dumps({
+                    "type": "sync_complete",
+                    "model_id": req.model_id,
+                    "target_node_id": peer.node_id,
+                    "status": results[peer.node_id],
+                    "ts": time.time(),
+                }))
+
+        if _ws_clients:
+            await _send_to_all(json.dumps({
+                "type": "sync_all_complete",
+                "model_id": req.model_id,
+                "results": results,
+                "ts": time.time(),
+            }))
+
+    background_tasks.add_task(run_sync)
+    return {
+        "status": "started",
+        "model_id": req.model_id,
+        "target_count": len(peers),
+        "targets": [p.node_id for p in peers],
+    }
+
+
+def _local_ip_for_peer_announce() -> str:
+    """Best-effort local IP to tell peers to connect back to us on, reusing
+    the same real-LAN-detection logic discovery.py already has."""
+    from .discovery import _get_real_lan_ips
+    ips = _get_real_lan_ips()
+    return ips[0] if ips else "127.0.0.1"
+
+
+@app.get("/api/sync/status/{model_id:path}")
+async def sync_status(model_id: str):
+    """Report which blobs of a model are present/missing on THIS node —
+    used by the dashboard to show per-node sync state before/during a sync."""
+    blobs = model_sync.read_manifest_blobs(model_id)
+    if not blobs:
+        return {"model_id": model_id, "cached_locally": False, "blobs": []}
+
+    blob_status = []
+    total_size = 0
+    present_size = 0
+    for b in blobs:
+        complete, present = model_sync.local_blob_status(b.digest, b.size)
+        total_size += b.size
+        present_size += present
+        blob_status.append({
+            "digest": b.digest, "size": b.size,
+            "complete": complete, "bytes_present": present,
+        })
+
+    return {
+        "model_id": model_id,
+        "cached_locally": all(b["complete"] for b in blob_status),
+        "total_size": total_size,
+        "present_size": present_size,
+        "blobs": blob_status,
+    }
