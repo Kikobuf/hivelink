@@ -27,15 +27,13 @@
 
 > Goal: make the cluster view feel alive like EXO — real-time GPU%, temp, wattage per node.
 
-- [ ] `/api/stats` endpoint — polls `nvidia-smi` (GPU util%, temp, power draw) on NVIDIA nodes, `psutil` (CPU%, RAM used) on all nodes every 2 seconds
-- [ ] Apple Silicon nodes: CPU% + RAM via `psutil` only for now (GPU temp/wattage added in v0.5 native app via `powermetrics`)
-- [ ] WebSocket pushes stats alongside peer updates — no separate polling needed
-- [ ] Node cards show live GPU utilization bar, temperature, wattage
-- [ ] Inference activity indicator — node card pulses when generation is active
-- [ ] Stats history — sparkline charts (last 60s) per node in hardware tab
-- [ ] Inference engine detection — auto-detect whether each node is running Ollama, MLX (`mlx_lm.server`), llama-server, or vLLM; show engine label in node card and hardware tab
-- [ ] MLX support note: install `mlx_lm` on Mac mini for significantly faster Apple Silicon inference — already OpenAI-compatible, zero code changes needed
-- [ ] vLLM support note: install `vllm` on Windows for higher NVIDIA throughput — already OpenAI-compatible, zero code changes needed
+- [x] `/api/stats` endpoint — polls `nvidia-smi` (GPU util%, temp, power draw) on NVIDIA nodes, `psutil` (CPU%, RAM used) on all nodes every 2 seconds
+- [x] Apple Silicon nodes: CPU% + RAM via `psutil` only for now (GPU temp/wattage added in v0.5 native app via `powermetrics`)
+- [x] WebSocket pushes stats alongside peer updates — no separate polling needed
+- [x] Node cards show live GPU utilization bar, temperature, wattage
+- [x] Inference activity indicator — node card pulses when generation is active
+- [x] Stats history — sparkline charts (last 60s) per node in hardware tab
+- [x] Inference engine detection — auto-detect whether each node is running Ollama, MLX (`mlx_lm.server`), llama-server, or vLLM; show engine label in node card and hardware tab
 
 ---
 
@@ -51,26 +49,17 @@
 
 ---
 
-## 🔨 v0.3.5 — Model sync across cluster (next)
+## ✅ v0.3.5 — Model sync across cluster
 
 > Goal: pull a model once on the fastest/most-connected node, automatically sync it to every other node that needs it for a cluster-split run — instead of manually running `ollama pull` on each machine separately.
 >
-> **Scope note:** this is the "full-copy + per-node layer loading" approach, not byte-level GGUF slicing. Each node still ends up with a complete local copy of the model file; the win is automating the copy + verifying it's ready, not reducing total bytes transferred. True partial-file streaming (only sending each node its assigned layer bytes) is a much larger, riskier effort — tracked separately below as a research item, not committed here.
+> **Scope note:** full-copy + per-node layer loading approach, not byte-level GGUF slicing. Each node ends up with a complete local copy; the win is automating the copy + verifying it's ready. True partial-file streaming is tracked separately as a research item (v0.3.6).
 
-**Why full-copy-and-sync instead of true partial streaming:**
-- GGUF is one binary blob with all layers concatenated; slicing it into a valid, independently-loadable partial file requires deep handling of GGUF's tensor index format and varies by model architecture — high effort, high risk of subtle corruption bugs
-- Full-copy sync solves the actual pain point today (manually pulling the same model 2+ times on different machines) without that risk
-- llama.cpp / Ollama already support loading only a layer *range* into GPU memory at runtime (`--n-gpu-layers` style controls) once the full file is present locally — so the "only this node's assigned layers get loaded" behavior is achievable without needing the file itself to be pre-sliced
-
-**Scoped work:**
-- [ ] Node-to-node file transfer — chunked HTTP transfer between HiveLink instances (new endpoint, e.g. `GET /api/model-blob/{model_id}` streamed from whichever node has it cached)
-- [ ] Resume-on-failure — large models (20–40GB+) will hit network interruptions; transfer needs to resume from last-good chunk, not restart from zero
-- [ ] Checksum verification — SHA256 the transferred file against the source node's copy before marking it usable; a silently corrupted weight file produces garbage output with no obvious error
-- [ ] "Sync to cluster" button in dashboard — pick a cached model, see which connected nodes don't have it yet, push a one-click sync with live per-node progress bars
-- [ ] Storage path + cleanup — consistent local storage location across platforms, plus a way to free disk space from models no longer in use
-- [ ] CLI equivalent: `hivelink sync <model>` — mirrors the dashboard button for terminal use
-
-**Estimated effort:** ~2–3 days of focused work. Self-contained — doesn't block or get blocked by other roadmap items.
+- [x] Node-to-node file transfer — chunked HTTP via `GET /api/sync/blob/{digest}` streamed from whichever node has it cached
+- [x] Resume-on-failure — transfer resumes from last-good chunk, not from zero
+- [x] Checksum verification — SHA256 verified against source node before marking usable
+- [x] "Sync to cluster" button in dashboard — one-click sync with live per-node progress bars
+- [x] CLI equivalent: `hivelink sync <model>`
 
 ---
 
@@ -85,7 +74,7 @@
 
 ---
 
-## 🔨 v0.4 — Sharding controls + instances
+## ✅ v0.4 — Sharding controls + instances
 
 > Goal: match EXO's instance/sharding UI, give users real control over how models run across the cluster.
 
@@ -93,8 +82,8 @@
 - [x] Auto sharding — detects connection type (Ethernet / WiFi / Thunderbolt) per node, picks the best safe mode automatically; shown as "Auto → Pipeline (Ethernet)" in the plan view
 - [x] Connection type badges on node cards — ⬡ ETH / ⌾ WiFi / ⚡ TB per node in the cluster view
 - [x] Minimum nodes setting — only launch inference if at least N nodes are available; clear error if not met
-- [ ] Instance management — run multiple models simultaneously on different node subsets
-- [ ] Instance panel in dashboard — launch, monitor, and kill model instances
+- [x] Instance management — launch, monitor, and kill model instances; models pinned in GPU memory via Ollama keep_alive
+- [x] Instance panel in dashboard — "Running instances" card on Models page; per-instance status badge, uptime clock, Kill button; Launch button on every cached model card; real-time updates over WebSocket
 
 ---
 
@@ -128,15 +117,15 @@
 
 ---
 
-## 🔨 v0.6 — Vision + file uploads
+## ✅ v0.6 — Vision + file uploads
 
 > Goal: multimodal support in the chat tab.
 
-- [ ] Auto-detect vision-capable models (llama3.2-vision, Qwen2-VL, LLaVA, etc.)
-- [ ] File upload button in chat — only shown when selected model supports vision
-- [ ] Image preview in chat bubbles
-- [ ] PDF upload — extract text, send as context
-- [ ] Drag-and-drop into chat input
+- [x] Auto-detect vision-capable models (llava, llama3.2-vision, Qwen2-VL, LLaVA, MiniCPM-V, Moondream, etc.) — 👁 badge in model dropdown, upload button only shown for vision models
+- [x] File upload button in chat — paperclip icon, only visible when selected model supports vision
+- [x] Image preview in chat bubbles — thumbnail shown above user message
+- [x] PDF upload — PDF.js extracts text client-side, injected as context in the message
+- [x] Drag-and-drop into chat messages area — images and PDFs both supported
 
 ---
 
@@ -145,7 +134,7 @@
 > Goal: connect nodes that aren't on the same LAN.
 
 - [ ] Tailscale integration — `hivelink join --tailscale` auto-configures discovery over Tailscale subnet
-- [ ] Manual peer addition — `hivelink peer add <ip>:<port>` for static setups
+- [ ] `hivelink peer add <ip>:<port>` CLI subcommand — static peer management via CLI (underlying `HIVELINK_PEERS` env var + `--peer` flag already works today; this wraps it in a proper subcommand with persistent config)
 - [ ] Encrypted transport — TLS between nodes for cross-network inference
 - [ ] Latency-aware scheduling — deprioritize high-latency nodes for layer assignments
 
@@ -157,8 +146,6 @@
 
 - [ ] Model dropdown shows engine alongside model name — e.g. "llama3.2 (MLX · Mac mini)" vs "llama3.2 (Ollama · Windows)"
 - [ ] Dashboard lets you pick which node/engine handles a given chat request when not using cluster-split mode
-- [ ] MLX install guide for Mac — `pip install mlx-lm`, run `mlx_lm.server`, HiveLink auto-detects via existing engine detection
-- [ ] vLLM install guide for NVIDIA — `pip install vllm`, run `vllm serve`, HiveLink auto-detects via existing engine detection
 - [ ] Document the constraint clearly in UI: cross-node layer splitting requires llama.cpp/GGUF on all participating nodes; MLX/vLLM nodes serve standalone (non-split) models only, selectable individually
 - [ ] (Stretch, no committed timeline) Investigate cross-engine pipeline splitting — different tensor formats and activation protocols make this a hard problem, likely its own research spike rather than a quick feature
 
@@ -226,7 +213,6 @@
 
 - **watchOS / Android companion** — cluster status glanceable on wrist or phone
 - **Web-hosted dashboard** — shareable cluster status page (read-only, no inference)
-- **Plugin system** — custom backends beyond llama.cpp (e.g. vLLM, TensorRT-LLM)
 - **Benchmark mode** — `hivelink bench` runs standard prompts and reports tok/s per node
 - **Power mode** — throttle nodes to a wattage budget (useful for running overnight)
 - **PyPI release** — `pip install hivelink` from the public package index

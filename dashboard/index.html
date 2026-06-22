@@ -312,6 +312,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .chat-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;resize:none;min-height:40px;max-height:120px;outline:none;transition:border-color .15s}
 .chat-input:focus{border-color:var(--accent)}
 .chat-input::placeholder{color:var(--muted)}
+/* Vision / file upload */
+.chat-upload-btn{width:34px;height:34px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;align-self:flex-end}
+.chat-upload-btn:hover{border-color:var(--accent);color:var(--accent)}
+.chat-upload-btn.has-file{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.chat-attachment-preview{padding:8px 16px 0;display:flex;align-items:center;gap:8px}
+.chat-attachment-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;border:1px solid var(--border2)}
+.chat-attachment-label{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-attachment-remove{width:20px;height:20px;background:transparent;border:1px solid var(--border2);border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.chat-attachment-remove:hover{border-color:#f0838344;color:#f08383}
+.vision-badge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;background:#6950ef18;color:#a78bfa;border:1px solid #6950ef44;font-weight:600;margin-left:6px}
+/* Drag-over highlight */
+.chat-messages.drag-over{border:2px dashed var(--accent);background:var(--accent-dim);border-radius:var(--r)}
 .chat-send{padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0}
 .chat-send:disabled{opacity:.4;cursor:default}
 .chat-tps{font-size:11px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:5px;padding:0 4px;white-space:nowrap}
@@ -522,14 +534,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="card chat-wrap">
       <div class="chat-toolbar">
         <span class="chat-toolbar-label">Model</span>
-        <select class="chat-model-select" id="chat-model-select"><option value="">— select model —</option></select>
+        <select class="chat-model-select" id="chat-model-select" onchange="onChatModelChange()"><option value="">— select model —</option></select>
         <button class="chat-clear" onclick="clearChat()">Clear</button>
       </div>
       <div id="no-model-warn" class="no-model-warn" style="display:none">No model selected. Choose one above.</div>
       <div class="chat-messages" id="chat-messages">
         <div data-placeholder style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>
       </div>
+      <div id="chat-attachment-preview" class="chat-attachment-preview" style="display:none">
+        <img id="chat-attachment-thumb" class="chat-attachment-thumb" src="" alt="attachment"/>
+        <span id="chat-attachment-label" class="chat-attachment-label"></span>
+        <button class="chat-attachment-remove" onclick="clearAttachment()" title="Remove attachment"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       <div class="chat-input-row">
+        <input type="file" id="chat-file-input" accept="image/*,.pdf" style="display:none" onchange="handleFileSelect(event)"/>
+        <button class="chat-upload-btn" id="chat-upload-btn" onclick="document.getElementById('chat-file-input').click()" title="Attach image or PDF" style="display:none">
+          <i class="fa-solid fa-paperclip" style="font-size:13px"></i>
+        </button>
         <textarea class="chat-input" id="chat-input" placeholder="Message your cluster…" rows="1"></textarea>
         <div class="chat-tps hidden" id="chat-tps"><i class="fa-solid fa-bolt" style="font-size:10px;color:var(--green)"></i><span class="chat-tps-val" id="chat-tps-val">0.0</span><span style="color:var(--muted2);margin-left:2px">tok/s</span></div>
         <button class="chat-send" id="chat-send" onclick="sendMessage()">Send</button>
@@ -1633,19 +1654,146 @@ function clearAllConversations(){
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
+// ── Vision model detection ─────────────────────────────────────────────────────
+const VISION_PATTERNS = ['llava','llama3.2-vision','llama3.2:11b-vision','llama3.2:90b-vision',
+  'qwen2-vl','qwen2.5-vl','qwenvl','minicpm-v','moondream','bakllava','cogvlm','cogvlm2',
+  'llava-llama3','llava-phi3','bunny','internvl','phi3-vision','phi-3-vision','phi4-vision'];
+
+function isVisionModel(modelId){
+  if(!modelId) return false;
+  const k=modelId.toLowerCase();
+  return VISION_PATTERNS.some(p=>k.includes(p));
+}
+
 function updateChatModelSelect(){
   const sel=document.getElementById('chat-model-select');const cur=sel.value;
   sel.innerHTML='<option value="">— select model —</option>'+
     models.map(m=>{
       const tag = m.live ? ' ● live' : m.cached ? ' (cached)' : ' (Q'+m.quant_bits+')';
-      return `<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${tag}</option>`;
+      const visionTag = isVisionModel(m.model_id) ? ' 👁' : '';
+      return `<option value="${m.model_id}"${m.model_id===cur?' selected':''}>${m.model_id}${tag}${visionTag}</option>`;
     }).join('');
+  // Re-evaluate upload button visibility when model list refreshes
+  onChatModelChange();
+}
+
+function onChatModelChange(){
+  const model=document.getElementById('chat-model-select').value;
+  const uploadBtn=document.getElementById('chat-upload-btn');
+  if(isVisionModel(model)){
+    uploadBtn.style.display='flex';
+  } else {
+    uploadBtn.style.display='none';
+    clearAttachment(); // clear any pending attachment if model switched away from vision
+  }
 }
 function clearChatUI(){
   document.getElementById('chat-messages').innerHTML='<div data-placeholder style="text-align:center;color:var(--muted);font-size:12px;margin:auto;padding:40px 0">Select a model above and start chatting</div>';
 }
 function clearChat(){chatHistory=[];activeConvId=null;clearChatUI();}
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ── Attachment state ───────────────────────────────────────────────────────────
+let pendingAttachment=null; // {type:'image'|'pdf', dataUrl, base64, mimeType, name, textContent}
+
+function clearAttachment(){
+  pendingAttachment=null;
+  document.getElementById('chat-attachment-preview').style.display='none';
+  document.getElementById('chat-file-input').value='';
+  document.getElementById('chat-upload-btn').classList.remove('has-file');
+}
+
+async function handleFileSelect(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  if(file.type==='application/pdf'){
+    await handlePdfAttachment(file);
+  } else if(file.type.startsWith('image/')){
+    await handleImageAttachment(file);
+  }
+}
+
+async function handleImageAttachment(file){
+  const dataUrl=await fileToDataUrl(file);
+  const base64=dataUrl.split(',')[1];
+  pendingAttachment={type:'image',dataUrl,base64,mimeType:file.type,name:file.name};
+  const thumb=document.getElementById('chat-attachment-thumb');
+  thumb.src=dataUrl;thumb.style.display='block';
+  document.getElementById('chat-attachment-label').textContent=file.name;
+  document.getElementById('chat-attachment-preview').style.display='flex';
+  document.getElementById('chat-upload-btn').classList.add('has-file');
+}
+
+async function handlePdfAttachment(file){
+  // Load PDF.js from CDN and extract text
+  document.getElementById('chat-attachment-label').textContent='Extracting PDF text…';
+  document.getElementById('chat-attachment-preview').style.display='flex';
+  document.getElementById('chat-attachment-thumb').style.display='none';
+  document.getElementById('chat-upload-btn').classList.add('has-file');
+  try{
+    if(!window.pdfjsLib){
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs','module');
+      window.pdfjsLib=window['pdfjs-dist/build/pdf'];
+      if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+    }
+    const arrayBuf=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:arrayBuf}).promise;
+    let text='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      text+=content.items.map(item=>item.str).join(' ')+'\n';
+    }
+    pendingAttachment={type:'pdf',name:file.name,textContent:text.trim()};
+    document.getElementById('chat-attachment-label').textContent=`${file.name} (${pdf.numPages} pages, ${Math.round(text.length/1000)}k chars)`;
+  }catch(err){
+    document.getElementById('chat-attachment-label').textContent=`PDF error: ${err.message}`;
+    pendingAttachment=null;
+    document.getElementById('chat-upload-btn').classList.remove('has-file');
+  }
+}
+
+function loadScript(src, type='text/javascript'){
+  return new Promise((res,rej)=>{
+    const el=document.createElement('script');
+    el.src=src;if(type==='module')el.type='module';
+    el.onload=res;el.onerror=rej;
+    document.head.appendChild(el);
+  });
+}
+
+function fileToDataUrl(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(file);
+  });
+}
+
+// ── Drag-and-drop onto chat messages ──────────────────────────────────────────
+function initChatDragDrop(){
+  const msgs=document.getElementById('chat-messages');
+  msgs.addEventListener('dragover',e=>{
+    e.preventDefault();
+    msgs.classList.add('drag-over');
+  });
+  msgs.addEventListener('dragleave',e=>{
+    if(!msgs.contains(e.relatedTarget)) msgs.classList.remove('drag-over');
+  });
+  msgs.addEventListener('drop',async e=>{
+    e.preventDefault();
+    msgs.classList.remove('drag-over');
+    const file=e.dataTransfer.files[0];
+    if(!file) return;
+    const model=document.getElementById('chat-model-select').value;
+    if(file.type.startsWith('image/')&&!isVisionModel(model)){
+      alert('Select a vision-capable model (e.g. llava, llama3.2-vision, qwen2-vl) to attach images.');
+      return;
+    }
+    if(file.type==='application/pdf') await handlePdfAttachment(file);
+    else if(file.type.startsWith('image/')) await handleImageAttachment(file);
+  });
+}
+initChatDragDrop();
 function formatMessage(text){
   text=text.replace(/<think>[\s\S]*?<\/think>/gi,'');
 
@@ -1732,12 +1880,44 @@ async function sendMessage(){
   const text=input.value.trim();
   if(!model){document.getElementById('no-model-warn').style.display='block';return;}
   document.getElementById('no-model-warn').style.display='none';
-  if(!text)return;
+  if(!text && !pendingAttachment)return;
   input.value='';input.style.height='auto';
-  chatHistory.push({role:'user',content:text});
+
+  // Build the message content — image: multimodal array, PDF: inject text as context
+  let userContent;
+  let userBubbleHtml='';
+  const attachment=pendingAttachment;
+  clearAttachment();
+
+  if(attachment?.type==='image'){
+    userContent=[
+      {type:'image_url',image_url:{url:`data:${attachment.mimeType};base64,${attachment.base64}`}},
+      {type:'text',text:text||'What is in this image?'}
+    ];
+    userBubbleHtml=`<img src="${attachment.dataUrl}" style="max-width:220px;max-height:160px;border-radius:6px;display:block;margin-bottom:6px;border:1px solid var(--border2)"/>`;
+    if(text) userBubbleHtml+=`<span>${escapeHtml(text)}</span>`;
+    chatHistory.push({role:'user',content:userContent});
+  } else if(attachment?.type==='pdf'){
+    const pdfContext=`[PDF: ${attachment.name}]\n${attachment.textContent}\n\n[End of PDF]`;
+    const combined=text?`${text}\n\n${pdfContext}`:pdfContext;
+    userContent=combined;
+    userBubbleHtml=`<span style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px"><i class="fa-solid fa-file-pdf" style="margin-right:4px"></i>${escapeHtml(attachment.name)}</span>`;
+    if(text) userBubbleHtml+=`<span>${escapeHtml(text)}</span>`;
+    chatHistory.push({role:'user',content:combined});
+  } else {
+    if(!text)return;
+    userContent=text;
+    userBubbleHtml=escapeHtml(text);
+    chatHistory.push({role:'user',content:text});
+  }
+
   const msgs=document.getElementById('chat-messages');
   const ph=msgs.querySelector('[data-placeholder]');if(ph)ph.remove();
-  const userDiv=document.createElement('div');userDiv.className='chat-bubble user';userDiv.textContent=text;msgs.appendChild(userDiv);
+  const userDiv=document.createElement('div');
+  userDiv.className='chat-bubble user';
+  userDiv.innerHTML=userBubbleHtml;
+  msgs.appendChild(userDiv);
+
   const replyId='reply-'+Date.now();
   const replyDiv=document.createElement('div');replyDiv.className='chat-bubble assistant';replyDiv.id=replyId;
   replyDiv.innerHTML=`<div class="thinking-wrap"><div class="thinking-dots"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div>
