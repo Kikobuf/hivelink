@@ -365,13 +365,15 @@ async def get_plan(
 ):
     if not _discovery:
         raise HTTPException(503, "Discovery not running")
-    if sharding_mode not in ("pipeline", "tensor"):
-        raise HTTPException(422, f"Unknown sharding_mode '{sharding_mode}' — use 'pipeline' or 'tensor'")
+    if sharding_mode not in ("pipeline", "tensor", "auto"):
+        raise HTTPException(422, f"Unknown sharding_mode '{sharding_mode}' — use 'pipeline', 'tensor', or 'auto'")
     if sharding_mode == "tensor":
         raise HTTPException(
             422,
-            "Tensor sharding isn't implemented yet — only pipeline sharding is supported "
-            "today. This is tracked on the roadmap (v0.4)."
+            "Tensor parallelism requires splitting individual matrix operations across nodes "
+            "simultaneously, which needs a custom inference engine — Ollama only supports "
+            "single-node tensor ops. This is tracked as a future research spike, not a "
+            "near-term feature. Use 'pipeline' or 'auto' instead.",
         )
 
     peers = _discovery.active_peers()

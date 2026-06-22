@@ -109,6 +109,11 @@ class PeerInfo:
     def tflops(self) -> float:
         return self.hardware.get("total_fp16_tflops", 1.0)
 
+    @property
+    def connection_type(self) -> str:
+        """Connection type reported by this peer's hardware profile."""
+        return self.hardware.get("connection_type", "unknown")
+
     def to_dict(self) -> dict:
         d = asdict(self)
         d.pop("last_seen", None)

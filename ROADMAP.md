@@ -87,13 +87,32 @@
 
 ## 🔨 v0.4 — Sharding controls + instances
 
-> Goal: match EXO's instance/sharding UI, add tensor parallelism option.
+> Goal: match EXO's instance/sharding UI, give users real control over how models run across the cluster.
 
-- [ ] Sharding mode selector — Pipeline (current) vs Tensor (splits matrix ops, needs high bandwidth)
-- [ ] Minimum nodes setting — only launch inference if at least N nodes are available
+- [x] Sharding mode selector — Pipeline (current) vs Tensor (see research spike below) vs Auto
+- [x] Auto sharding — detects connection type (Ethernet / WiFi / Thunderbolt) per node, picks the best safe mode automatically; shown as "Auto → Pipeline (Ethernet)" in the plan view
+- [x] Connection type badges on node cards — ⬡ ETH / ⌾ WiFi / ⚡ TB per node in the cluster view
+- [x] Minimum nodes setting — only launch inference if at least N nodes are available; clear error if not met
 - [ ] Instance management — run multiple models simultaneously on different node subsets
 - [ ] Instance panel in dashboard — launch, monitor, and kill model instances
-- [ ] Auto-select sharding mode based on connection type (Ethernet vs WiFi vs Thunderbolt)
+
+---
+
+## 🔬 Tensor parallelism (research spike, not committed — moved out of v0.4)
+
+> **Why this isn't in v0.4:** Tensor parallelism splits individual matrix operations across nodes
+> simultaneously, requiring an all-reduce communication step between every layer. Ollama has no
+> concept of splitting a single operation across network-connected machines — `--tensor-split` in
+> llama.cpp only works across GPUs on the *same* machine. Real cross-network tensor parallelism
+> (as used by vLLM in data center setups) requires writing custom all-reduce coordination over
+> TCP/NCCL — a multi-month research project that would mean replacing Ollama entirely.
+>
+> The Tensor button is kept in the UI with an honest explanation rather than being removed,
+> so users understand why it's not available. This spike tracks what it would take to ever change that.
+
+- [ ] Investigate whether llama.cpp's `--rpc` server mode (added in late 2024) supports true tensor splitting across network nodes — it may provide a path that doesn't require writing all-reduce from scratch
+- [ ] Prototype a single-layer boundary handoff between two llama.cpp RPC nodes — measure latency overhead per all-reduce step on a home GbE LAN
+- [ ] Decision point after prototype: pursue as a real feature (would need its own milestone, v1.x territory), or formally close out as "not viable on home LAN hardware" with benchmarks recorded here
 
 ---
 

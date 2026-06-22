@@ -15,6 +15,7 @@ from typing import Literal
 import psutil
 
 BackendType = Literal["cuda", "metal", "rocm", "vulkan", "cpu"]
+ConnectionType = Literal["ethernet", "wifi", "thunderbolt", "unknown"]
 
 
 @dataclass
@@ -24,6 +25,86 @@ class GPUInfo:
     backend: BackendType
     vram_mb: int
     fp16_tflops: float
+
+
+def detect_connection_type() -> "ConnectionType":
+    """
+    Infer the primary LAN connection type for this node using psutil's net_if_stats().
+
+    Logic:
+      - Match the network interface whose IP is our real LAN IP (same filtering as discovery.py).
+      - Thunderbolt: adapter name contains "thunderbolt" or "tb" (Windows/Mac naming).
+      - Ethernet: speed >= 1000 Mbps AND full duplex — characteristic of wired GbE+.
+      - WiFi: speed < 1000 Mbps OR half duplex, OR interface name contains "wi-fi"/"wlan"/"wireless".
+      - Unknown: psutil not available or no real LAN interface found.
+
+    This is best-effort: virtualised environments or unusual NIC names may mis-classify.
+    The result is surfaced in the dashboard for info and used to inform the auto-sharding
+    suggestion (pipeline is always safe; tensor needs high-bandwidth, so Ethernet/Thunderbolt
+    are the only reasonable choices when it's eventually implemented).
+    """
+    try:
+        import socket as _socket
+        addrs = psutil.net_if_addrs()
+        stats = psutil.net_if_stats()
+
+        # Build a map of  ip -> interface_name  for all real LAN IPs
+        _VIRTUAL = (
+            "192.168.56.", "192.168.99.", "172.17.", "172.18.", "172.19.",
+            "172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.",
+            "172.26.", "172.27.", "172.28.", "172.29.", "172.30.", "172.31.",
+            "169.254.",
+        )
+        real_ifaces: list[str] = []
+        for iface, iface_addrs in addrs.items():
+            for addr in iface_addrs:
+                if addr.family == _socket.AF_INET:
+                    ip = addr.address
+                    if ip.startswith("127.") or any(ip.startswith(p) for p in _VIRTUAL):
+                        continue
+                    real_ifaces.append(iface)
+
+        if not real_ifaces:
+            return "unknown"
+
+        # Score each real interface — prefer the fastest one
+        best: tuple[int, str] | None = None   # (speed_mbps, iface_name)
+        for iface in real_ifaces:
+            s = stats.get(iface)
+            if s is None:
+                continue
+            speed = s.speed or 0
+            if best is None or speed > best[0]:
+                best = (speed, iface)
+
+        if best is None:
+            return "unknown"
+
+        speed_mbps, iface_name = best
+        name_lower = iface_name.lower()
+
+        # Thunderbolt — explicit name match (Windows: "Thunderbolt", Mac: "tb0"/"bridge100" etc.)
+        if "thunderbolt" in name_lower or (name_lower.startswith("tb") and name_lower[2:].isdigit()):
+            return "thunderbolt"
+
+        # WiFi — name-based first (most reliable cross-platform signal)
+        if any(k in name_lower for k in ("wi-fi", "wifi", "wlan", "wireless", "airport", "wlp", "wlo")):
+            return "wifi"
+
+        # Speed+duplex based classification for everything else
+        st = stats.get(iface_name)
+        is_full_duplex = st.duplex == psutil.NIC_DUPLEX_FULL if st else False
+
+        if speed_mbps >= 1000 and is_full_duplex:
+            return "ethernet"
+        elif speed_mbps > 0:
+            # Low speed or half-duplex — likely WiFi even without a telltale name
+            return "wifi"
+
+        return "unknown"
+
+    except Exception:
+        return "unknown"
 
 
 @dataclass
@@ -36,6 +117,7 @@ class HardwareProfile:
     primary_backend: BackendType = "cpu"
     total_vram_mb: int = 0
     total_fp16_tflops: float = 0.0
+    connection_type: ConnectionType = "unknown"
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -198,6 +280,7 @@ def detect() -> HardwareProfile:
 
     total_vram = sum(g.vram_mb for g in gpus)
     total_tflops = sum(g.fp16_tflops for g in gpus)
+    conn_type = detect_connection_type()
 
     return HardwareProfile(
         node_os=os_name,
@@ -208,4 +291,5 @@ def detect() -> HardwareProfile:
         primary_backend=primary_backend,
         total_vram_mb=total_vram,
         total_fp16_tflops=total_tflops,
+        connection_type=conn_type,
     )

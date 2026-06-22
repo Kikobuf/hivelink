@@ -43,8 +43,10 @@ class ClusterPlan:
     total_params_b: float
     quant_bits: int
     assignments: list[LayerAssignment]
-    sharding_mode: str = "pipeline"   # "pipeline" (supported) or "tensor" (not yet implemented)
+    sharding_mode: str = "pipeline"       # resolved mode actually used
+    requested_mode: str = "pipeline"      # what the caller asked for (may be 'auto')
     min_nodes: int = 1
+    weakest_connection: str = "unknown"   # weakest link across participating nodes
 
     @property
     def node_count(self) -> int:
@@ -52,14 +54,16 @@ class ClusterPlan:
 
     def to_dict(self) -> dict:
         return {
-            "model_id":      self.model_id,
-            "total_layers":  self.total_layers,
-            "total_params_b":self.total_params_b,
-            "quant_bits":    self.quant_bits,
-            "node_count":    self.node_count,
-            "assignments":   [a.to_dict() for a in self.assignments],
-            "sharding_mode": self.sharding_mode,
-            "min_nodes":     self.min_nodes,
+            "model_id":           self.model_id,
+            "total_layers":       self.total_layers,
+            "total_params_b":     self.total_params_b,
+            "quant_bits":         self.quant_bits,
+            "node_count":         self.node_count,
+            "assignments":        [a.to_dict() for a in self.assignments],
+            "sharding_mode":      self.sharding_mode,
+            "requested_mode":     self.requested_mode,
+            "min_nodes":          self.min_nodes,
+            "weakest_connection": self.weakest_connection,
         }
 
 
@@ -97,6 +101,37 @@ def model_size_mb(params_b: float, quant_bits: int) -> float:
     return params_b * 1e9 * (quant_bits / 8.0) / (1024 * 1024)
 
 
+def _weakest_link_connection(peers: list[PeerInfo]) -> str:
+    """
+    Return the weakest connection type across all peers.
+    Order (strongest → weakest): thunderbolt > ethernet > wifi > unknown.
+    Used by auto-sharding to pick the most conservative safe default.
+    """
+    rank = {"thunderbolt": 3, "ethernet": 2, "wifi": 1, "unknown": 0}
+    weakest = "thunderbolt"
+    for p in peers:
+        ct = p.connection_type
+        if rank.get(ct, 0) < rank.get(weakest, 0):
+            weakest = ct
+    return weakest
+
+
+def resolve_sharding_mode(mode: str, peers: list[PeerInfo]) -> str:
+    """
+    Resolve 'auto' to a concrete sharding mode based on connection type.
+    - Thunderbolt / Ethernet → 'pipeline'  (tensor not implemented yet, but wired is the
+      right tier to suggest it when it lands)
+    - WiFi / unknown        → 'pipeline'  (high-latency; tensor would be even worse)
+    Today pipeline is always the result — this function is the right place to
+    switch to 'tensor' for Thunderbolt/Ethernet once tensor parallelism is implemented.
+    """
+    if mode != "auto":
+        return mode
+    # All roads lead to pipeline for now — but we record what we detected so the
+    # dashboard can show "Auto → Pipeline (Ethernet)" as a useful label.
+    return "pipeline"
+
+
 def assign_layers(
     peers: list[PeerInfo],
     model_id: str,
@@ -110,14 +145,12 @@ def assign_layers(
         return None
 
     if len(peers) < min_nodes:
-        return None  # not enough nodes online to satisfy the minimum-nodes requirement
+        return None
 
-    if sharding_mode == "tensor":
-        # Tensor parallelism across separate machines isn't implemented yet — the
-        # underlying engine (llama.cpp via Ollama) doesn't support splitting individual
-        # matrix operations across network-connected nodes the way it does layers.
-        # Honestly refuse rather than silently falling back to pipeline mode, so the
-        # caller (API/dashboard) can surface a clear "not supported yet" message.
+    # Resolve 'auto' → concrete mode before any further checks
+    resolved_mode = resolve_sharding_mode(sharding_mode, peers)
+
+    if resolved_mode == "tensor":
         return None
 
     spec = MODEL_SPECS.get(model_id.lower())
@@ -169,14 +202,18 @@ def assign_layers(
         if layer_cursor >= total_layers:
             break
 
+    weakest_link = _weakest_link_connection(peers)
+
     return ClusterPlan(
-        model_id       = model_id,
-        total_layers   = total_layers,
-        total_params_b = params_b,
-        quant_bits     = quant_bits,
-        assignments    = assignments,
-        sharding_mode  = sharding_mode,
-        min_nodes      = min_nodes,
+        model_id           = model_id,
+        total_layers       = total_layers,
+        total_params_b     = params_b,
+        quant_bits         = quant_bits,
+        assignments        = assignments,
+        sharding_mode      = resolved_mode,
+        requested_mode     = sharding_mode,   # preserve 'auto' so dashboard can label it
+        min_nodes          = min_nodes,
+        weakest_connection = weakest_link,
     )
 
 

@@ -182,11 +182,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .sharding-toggle:hover{border-color:var(--accent)}
 .sharding-toggle.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:600}
 .sharding-toggle.disabled-mode{opacity:.55}
-.sharding-hint{font-size:10px;color:var(--muted);margin-top:7px;max-width:220px;line-height:1.5}
+.sharding-hint{font-size:10px;color:var(--muted);margin-top:7px;max-width:260px;line-height:1.5}
 .min-nodes-row{display:flex;align-items:center;gap:10px}
 .min-nodes-dot{width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);font-size:12px;font-family:var(--mono);font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .min-nodes-dot:hover{border-color:var(--accent)}
 .min-nodes-dot.active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* Connection type badges on node cards */
+.conn-badge{font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px;flex-shrink:0;font-weight:600;letter-spacing:.04em}
+.conn-ethernet{background:#0d7e4318;color:#3fb950;border:1px solid #3fb95044}
+.conn-thunderbolt{background:#bf8b2e18;color:#e3b341;border:1px solid #e3b34144}
+.conn-wifi{background:#388bfd18;color:#79c0ff;border:1px solid #79c0ff44}
+.conn-unknown{background:var(--surface2);color:var(--muted);border:1px solid var(--border2)}
 .model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
 .model-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -436,6 +442,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <div>
           <div class="sharding-label">Strategy</div>
           <div class="sharding-toggle-group">
+            <button class="sharding-toggle" id="sharding-auto-btn" onclick="setShardingMode('auto')">
+              <i class="fa-solid fa-bolt" style="font-size:10px;margin-right:5px"></i>Auto
+            </button>
             <button class="sharding-toggle active" id="sharding-pipeline-btn" onclick="setShardingMode('pipeline')">
               <i class="fa-solid fa-layer-group" style="font-size:10px;margin-right:5px"></i>Pipeline
             </button>
@@ -766,6 +775,13 @@ function engineLabel(e){return{ollama:'Ollama',mlx:'MLX',vllm:'vLLM','llama-serv
 const fmtMem=mb=>!mb?'0':mb>=1024?(mb/1024).toFixed(1)+' GB':mb+' MB';
 const backBadge=b=>`<span class="badge badge-${b||'cpu'}">${(b||'cpu').toUpperCase()}</span>`;
 
+function connBadge(connType){
+  const labels={ethernet:'⬡ ETH',thunderbolt:'⚡ TB',wifi:'⌾ WiFi',unknown:''};
+  const label=labels[connType]||'';
+  if(!label) return '';
+  return `<span class="conn-badge conn-${connType}">${label}</span>`;
+}
+
 // ── EXO Cluster Viz ───────────────────────────────────────────────────────────
 const BOX_W=168, BOX_H=130, BOX_PAD=32;
 
@@ -864,6 +880,7 @@ function renderClusterViz(){
       </div>
       <div class="exo-footer">
         <span class="exo-mem">${fmtMem(mem)}</span>
+        ${connBadge(hw.connection_type||'unknown')}
         ${eng&&eng!=='none'?'<span class="node-engine-pill '+eng+'">'+engineLabel(eng)+'</span>':'<span class="exo-mem">'+(firstGpu||hw.cpu_name||'')+'</span>'}
       </div>`;
     wrap.appendChild(box);
@@ -1334,17 +1351,22 @@ let lastSelectedQuant=4;
 
 function setShardingMode(mode){
   shardingMode=mode;
+  document.getElementById('sharding-auto-btn').classList.toggle('active',mode==='auto');
   document.getElementById('sharding-pipeline-btn').classList.toggle('active',mode==='pipeline');
   document.getElementById('sharding-tensor-btn').classList.toggle('active',mode==='tensor');
   const hint=document.getElementById('sharding-hint');
-  hint.textContent = mode==='pipeline'
-    ? 'Layers split sequentially across nodes — supported today.'
-    : 'Splits individual operations across nodes — not implemented yet, tracked on the roadmap (v0.4).';
+  if(mode==='auto'){
+    hint.textContent='Auto-selects based on your connection type — fetching plan…';
+  } else if(mode==='pipeline'){
+    hint.textContent='Layers split sequentially across nodes — supported today.';
+  } else {
+    hint.textContent='Tensor parallelism splits individual matrix ops across nodes simultaneously — requires a custom inference engine and is not achievable over LAN with Ollama. Tracked as a future research spike, not a near-term feature.';
+  }
   if(selectedModel) selectModel(selectedModel, lastSelectedQuant);
 }
 
 // Mark Tensor as a recognizably-disabled mode (still clickable, so the honest
-// "not implemented yet" error message shows rather than the option just vanishing)
+// explanation shows rather than the option just vanishing)
 (function initTensorButtonStyle(){
   const btn=document.getElementById('sharding-tensor-btn');
   if(btn) btn.classList.add('disabled-mode');
@@ -1395,7 +1417,20 @@ async function selectModel(modelId,quantBits){
 function renderPlan(plan){
   const container=document.getElementById('plan-container');container.style.display='block';
   document.getElementById('plan-title').textContent=`${plan.model_id} — layer distribution`;
-  document.getElementById('plan-meta').textContent=`${plan.total_layers} layers · ${plan.total_params_b}B · Q${plan.quant_bits} · ${plan.node_count} node(s) · ${plan.sharding_mode}`;
+
+  // Build a human-readable mode label
+  let modeLabel = plan.sharding_mode;
+  if(plan.requested_mode==='auto'){
+    const connLabel = plan.weakest_connection
+      ? ({ethernet:'Ethernet',thunderbolt:'Thunderbolt',wifi:'WiFi',unknown:'?'}[plan.weakest_connection]||plan.weakest_connection)
+      : '';
+    modeLabel = `Auto → Pipeline${connLabel?' ('+connLabel+')':''}`;
+    // Update the hint to reflect what auto resolved to
+    const hint=document.getElementById('sharding-hint');
+    if(hint) hint.textContent=`Auto selected Pipeline based on your ${connLabel||'connection'} — fastest safe option.`;
+  }
+
+  document.getElementById('plan-meta').textContent=`${plan.total_layers} layers · ${plan.total_params_b}B · Q${plan.quant_bits} · ${plan.node_count} node(s) · ${modeLabel}`;
   document.getElementById('plan-assignments').innerHTML=(plan.assignments||[]).map((a,i)=>{
     const color=COLORS[i%COLORS.length];
     const pct=Math.round(a.layer_count/plan.total_layers*100);
