@@ -522,6 +522,159 @@ async def health():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Instance management (v0.4) — launch / monitor / kill named model instances.
+#
+# Design:
+#   An "instance" is a model pinned into Ollama's memory on this node.
+#   Ollama keeps a model loaded between requests when keep_alive > 0.
+#   We track instances in-memory (resets on server restart — intentional,
+#   Ollama's loaded state also resets on restart so they'd be out of sync
+#   if we persisted to disk).
+#
+#   Launch  — POST /api/instances         → warm the model via a dummy generate
+#   List    — GET  /api/instances         → current registry
+#   Kill    — DELETE /api/instances/{id}  → unload via keep_alive=0
+# ═══════════════════════════════════════════════════════════════════════════
+
+import dataclasses as _dc
+
+@_dc.dataclass
+class ModelInstance:
+    instance_id: str
+    model_id: str
+    status: str          # "launching" | "running" | "error" | "stopped"
+    launched_at: float
+    error: str = ""
+    node_ids: list = _dc.field(default_factory=list)  # which nodes are involved
+
+    def to_dict(self) -> dict:
+        return {
+            "instance_id": self.instance_id,
+            "model_id":    self.model_id,
+            "status":      self.status,
+            "launched_at": self.launched_at,
+            "error":       self.error,
+            "node_ids":    self.node_ids,
+        }
+
+# node_id → ModelInstance
+_instances: dict[str, ModelInstance] = {}
+
+
+async def _warm_model(instance_id: str, model_id: str, keep_alive: str = "60m") -> None:
+    """
+    Send a minimal generate request to Ollama to force it to load the model
+    into GPU memory and keep it there. Updates instance status in-place.
+    Runs as a background task so the launch endpoint returns immediately.
+    """
+    inst = _instances.get(instance_id)
+    if not inst:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            # POST /api/generate with an empty prompt — just enough to load the model.
+            # keep_alive tells Ollama how long to hold it in memory after the last request.
+            resp = await client.post(
+                "http://127.0.0.1:11434/api/generate",
+                json={"model": model_id, "prompt": "", "keep_alive": keep_alive, "stream": False},
+            )
+            if resp.status_code == 200:
+                inst.status = "running"
+            else:
+                inst.status = "error"
+                inst.error = f"Ollama returned {resp.status_code}"
+    except httpx.ConnectError:
+        inst.status = "error"
+        inst.error = "Ollama not reachable on port 11434"
+    except Exception as e:
+        inst.status = "error"
+        inst.error = str(e)[:120]
+
+    # Broadcast updated instance state to dashboard
+    if _ws_clients:
+        await _send_to_all(json.dumps({
+            "type":     "instance_update",
+            "instance": inst.to_dict(),
+            "ts":       time.time(),
+        }))
+
+
+class LaunchInstanceRequest(BaseModel):
+    model_id: str
+    keep_alive: str = "60m"   # Ollama duration string: "10m", "1h", "-1" (forever), "0" (unload)
+
+
+@app.post("/api/instances")
+async def launch_instance(req: LaunchInstanceRequest, background_tasks: BackgroundTasks):
+    """Launch a model instance — loads it into Ollama memory and keeps it warm."""
+    # Check for an already-running instance of this model
+    for inst in _instances.values():
+        if inst.model_id == req.model_id and inst.status in ("launching", "running"):
+            return {"status": "already_running", "instance": inst.to_dict()}
+
+    instance_id = str(uuid.uuid4())
+    peers = _discovery.active_peers() if _discovery else []
+    inst = ModelInstance(
+        instance_id = instance_id,
+        model_id    = req.model_id,
+        status      = "launching",
+        launched_at = time.time(),
+        node_ids    = [p.node_id for p in peers],
+    )
+    _instances[instance_id] = inst
+
+    background_tasks.add_task(_warm_model, instance_id, req.model_id, req.keep_alive)
+
+    # Immediately broadcast "launching" so the dashboard shows a spinner
+    if _ws_clients:
+        asyncio.create_task(_send_to_all(json.dumps({
+            "type":     "instance_update",
+            "instance": inst.to_dict(),
+            "ts":       time.time(),
+        })))
+
+    return {"status": "launching", "instance": inst.to_dict()}
+
+
+@app.get("/api/instances")
+async def list_instances():
+    """List all tracked model instances and their current status."""
+    return {"instances": [i.to_dict() for i in _instances.values()]}
+
+
+@app.delete("/api/instances/{instance_id}")
+async def kill_instance(instance_id: str):
+    """
+    Kill a running instance — tells Ollama to immediately unload the model
+    from GPU memory (keep_alive=0), then removes it from the registry.
+    """
+    inst = _instances.get(instance_id)
+    if not inst:
+        raise HTTPException(404, f"Instance {instance_id} not found")
+
+    inst.status = "stopped"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                "http://127.0.0.1:11434/api/generate",
+                json={"model": inst.model_id, "prompt": "", "keep_alive": "0", "stream": False},
+            )
+    except Exception:
+        pass  # best-effort unload — instance is removed from registry regardless
+
+    del _instances[instance_id]
+
+    if _ws_clients:
+        await _send_to_all(json.dumps({
+            "type":        "instance_killed",
+            "instance_id": instance_id,
+            "ts":          time.time(),
+        }))
+
+    return {"status": "stopped", "instance_id": instance_id}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Model sync (v0.3.5) — endpoints used by hivelink.sync for node-to-node
 # blob transfer. See hivelink/sync.py module docstring for the full design.
 # ═══════════════════════════════════════════════════════════════════════════
@@ -742,3 +895,9 @@ async def sync_status(model_id: str):
         "present_size": present_size,
         "blobs": blob_status,
     }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "node_id": _node_id[:8], "ts": time.time()}
+

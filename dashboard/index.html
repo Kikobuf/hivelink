@@ -193,6 +193,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .conn-thunderbolt{background:#bf8b2e18;color:#e3b341;border:1px solid #e3b34144}
 .conn-wifi{background:#388bfd18;color:#79c0ff;border:1px solid #79c0ff44}
 .conn-unknown{background:var(--surface2);color:var(--muted);border:1px solid var(--border2)}
+/* Instance panel */
+.instance-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)}
+.instance-row:last-child{border-bottom:none}
+.instance-model{font-size:12px;font-family:var(--mono);color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.instance-status{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:3px;font-weight:600;flex-shrink:0}
+.instance-status.running{background:#0d7e4318;color:#3fb950;border:1px solid #3fb95044}
+.instance-status.launching{background:#bf8b2e18;color:#e3b341;border:1px solid #e3b34144}
+.instance-status.error{background:#d2992218;color:var(--amber);border:1px solid #d2992244}
+.instance-status.stopped{background:var(--surface2);color:var(--muted);border:1px solid var(--border2)}
+.instance-kill-btn{font-size:10px;padding:3px 9px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);cursor:pointer;transition:all .15s;flex-shrink:0}
+.instance-kill-btn:hover{border-color:#f0838344;color:#f08383}
+.instance-uptime{font-size:10px;color:var(--muted);font-family:var(--mono);flex-shrink:0}
+/* Model card action buttons */
+.model-launch-btn{font-size:10px;padding:3px 9px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--r);color:var(--accent);cursor:pointer;transition:all .15s;font-weight:600;flex-shrink:0}
+.model-launch-btn:hover{background:var(--accent);color:#fff}
+.model-launch-btn.running{background:#0d7e4318;border-color:#3fb95044;color:#3fb950;cursor:default}
+.model-launch-btn.launching{background:#bf8b2e18;border-color:#e3b34144;color:#e3b341;cursor:default}
 .model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
 .model-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -432,6 +449,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div><div class="page-title">Models</div><div class="page-sub">Click a model to see the layer distribution plan</div></div>
     <button class="pull-btn" onclick="openPullModal()"><i class="fa-solid fa-download" style="font-size:11px"></i> Pull model</button>
   </div>
+
+  <!-- Instance panel — always visible on Models page, empty state when no instances -->
+  <div id="instances-container" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <span><i class="fa-solid fa-bolt" style="font-size:10px;margin-right:6px;color:var(--accent)"></i>Running instances</span>
+        <span id="instance-count-badge" style="font-size:10px;font-family:var(--mono);color:var(--muted)">0 running</span>
+      </div>
+      <div style="padding:0 16px 4px">
+        <div id="instance-list">
+          <div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px">
+            No instances running — launch a model below to pin it in GPU memory.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="models-grid" id="models-grid">
     <div class="empty" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-cube" style="color:var(--muted2)"></i></div><div class="empty-title">No models available</div><div class="empty-sub">Start Ollama or llama-server with a model loaded</div></div>
   </div>
@@ -626,7 +660,7 @@ response = client.chat.completions.create(
     <span class="cmd">print</span>(chunk.choices[0].delta.content or <span class="flag">""</span>, end=<span class="flag">""</span>)`;
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let peers=[], models=[], ws=null, selectedModel=null;
+let peers=[], models=[], ws=null, selectedModel=null, instances=[];
 let nodeStats={};
 let chatHistory=[], chatStreaming=false, activeConvId=null;
 const COLORS=['#2f81f7','#a371f7','#3fb950','#d29922','#f85149','#58a6ff','#bc8cff','#79c0ff'];
@@ -699,6 +733,18 @@ function connect(){
       }
       if(msg.type==='sync_all_complete'){
         handleSyncAllComplete(msg);
+      }
+      if(msg.type==='instance_update'){
+        const idx=instances.findIndex(i=>i.instance_id===msg.instance.instance_id);
+        if(idx>=0) instances[idx]=msg.instance;
+        else instances.push(msg.instance);
+        renderInstances();
+        renderModels(); // refresh Launch button state
+      }
+      if(msg.type==='instance_killed'){
+        instances=instances.filter(i=>i.instance_id!==msg.instance_id);
+        renderInstances();
+        renderModels();
       }
     }catch(_){}
   };
@@ -1326,12 +1372,28 @@ function renderModels(){
            <i class="fa-solid fa-arrows-rotate"></i>
          </button>`
       : '';
+    const isRunning = instances.some(i=>i.model_id===m.model_id && i.status==='running');
+    const isLaunching = instances.some(i=>i.model_id===m.model_id && i.status==='launching');
+    const launchBtn = m.cached
+      ? isRunning
+        ? `<button class="model-launch-btn running" onclick="event.stopPropagation()" title="Instance running" disabled>
+             <i class="fa-solid fa-circle" style="font-size:7px;margin-right:4px"></i>Running
+           </button>`
+        : isLaunching
+          ? `<button class="model-launch-btn launching" onclick="event.stopPropagation()" title="Launching…" disabled>
+               <i class="fa-solid fa-spinner fa-spin" style="font-size:9px;margin-right:4px"></i>Launching…
+             </button>`
+          : `<button class="model-launch-btn" onclick="event.stopPropagation();launchInstance('${m.model_id}')" title="Pin model in GPU memory">
+               <i class="fa-solid fa-bolt" style="font-size:9px;margin-right:4px"></i>Launch
+             </button>`
+      : '';
     return`<div class="model-card${sel}${m.cached?'':' not-cached'}" ${clickHandler}>
       <div class="model-header-row"><div class="model-logo" style="background:${meta.bg}">${meta.icon}</div>
         <div><div class="model-name">${m.model_id}</div><div class="model-params">${m.params_b?m.params_b.toFixed(1)+'B params':'loaded'}</div></div>${pill}</div>
       <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="model-footer"><span class="model-size">${sz}</span>
         <div style="display:flex;align-items:center;gap:6px">
+          ${launchBtn}
           ${syncBtn}
           ${downloadBtn || `<span style="font-size:10px;color:var(--muted)">${m.layers?m.layers+' layers':''}</span>`}
         </div>
@@ -1344,6 +1406,74 @@ function quickPull(modelId){
   openPullModal();
   document.getElementById('pull-model-input').value=modelId;
 }
+
+// ── Instance management ────────────────────────────────────────────────────────
+async function fetchInstances(){
+  try{
+    const res=await fetch(API_BASE+'/api/instances');
+    if(res.ok){ instances=(await res.json()).instances||[]; renderInstances(); renderModels(); }
+  }catch(_){}
+}
+
+async function launchInstance(modelId){
+  try{
+    const res=await fetch(API_BASE+'/api/instances',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model_id:modelId, keep_alive:'60m'})
+    });
+    if(res.ok){
+      const data=await res.json();
+      const inst=data.instance;
+      const idx=instances.findIndex(i=>i.instance_id===inst.instance_id);
+      if(idx>=0) instances[idx]=inst; else instances.push(inst);
+      renderInstances();
+      renderModels();
+    }
+  }catch(_){}
+}
+
+async function killInstance(instanceId){
+  try{
+    await fetch(API_BASE+'/api/instances/'+instanceId,{method:'DELETE'});
+    // WS will handle state update; optimistically remove for snappy UI
+    instances=instances.filter(i=>i.instance_id!==instanceId);
+    renderInstances();
+    renderModels();
+  }catch(_){}
+}
+
+function fmtUptime(launchedAt){
+  const secs=Math.floor(Date.now()/1000 - launchedAt);
+  if(secs<60) return secs+'s';
+  if(secs<3600) return Math.floor(secs/60)+'m';
+  return Math.floor(secs/3600)+'h '+Math.floor((secs%3600)/60)+'m';
+}
+
+function renderInstances(){
+  const list=document.getElementById('instance-list');
+  const badge=document.getElementById('instance-count-badge');
+  if(!list) return;
+  const running=instances.filter(i=>i.status!=='stopped');
+  if(badge) badge.textContent=running.length===1?'1 running':running.length+' running';
+  if(!running.length){
+    list.innerHTML=`<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px">No instances running — launch a model below to pin it in GPU memory.</div>`;
+    return;
+  }
+  list.innerHTML=running.map(inst=>`
+    <div class="instance-row">
+      <span class="instance-model">${inst.model_id}</span>
+      <span class="instance-status ${inst.status}">${inst.status}</span>
+      <span class="instance-uptime">${fmtUptime(inst.launched_at)}</span>
+      <button class="instance-kill-btn" onclick="killInstance('${inst.instance_id}')" title="Unload from GPU memory">
+        <i class="fa-solid fa-xmark"></i> Kill
+      </button>
+    </div>`).join('');
+}
+
+// Poll instances on page load and every 15s (WS handles real-time updates)
+fetchInstances();
+setInterval(fetchInstances, 15000);
 // ── Sharding state ────────────────────────────────────────────────────────────
 let shardingMode='pipeline';
 let minNodes=1;
