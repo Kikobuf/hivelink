@@ -151,16 +151,29 @@
 
 ---
 
-## 🔨 v0.9 — Tool calling + MCP support
+## ✅ v0.9 — Tool calling + Skills
 
-> Goal: let local models use tools — web search, file access, custom MCP servers — the same way Claude Desktop does, but running on your own cluster.
+> Goal: let local models use custom skill contexts, and pass tools through to capable models.
 
-- [ ] OpenAI-compatible tool calling — extend `/v1/chat/completions` to accept and return `tools` / `tool_calls`
-- [ ] "Tool-capable" badge on models in dashboard — not all local models handle function calling reliably (Llama 3.x, Qwen2.5, Mistral are solid; smaller/older models often hallucinate calls)
-- [ ] MCP bridge — HiveLink connects to MCP servers (stdio/HTTP), forwards tool calls from the model, returns results for the next turn
-- [ ] New "Tools" tab in dashboard — connect/manage MCP servers (web search, filesystem, custom servers like KB Rides Shopify MCP)
-- [ ] Tool-call indicator in chat — "Calling web_search…" animation similar to the thinking-dots display
-- [ ] Note: tool-calling reliability scales with model size — this is a natural pull toward running larger models (Qwen2.5-32B+) across the cluster, which is exactly what HiveLink is for
+- [x] OpenAI-compatible tool calling — `ChatRequest` now accepts `tools` and `tool_choice`, passed straight through to Ollama for capable models (Qwen2.5, Llama3.1+, Mistral)
+- [x] Skills system — create, edit, delete, import from URL (JSON or Vercel-style markdown with YAML frontmatter); stored in `~/.hivelink/skills.json`
+- [x] Skill elicitation UI — modal collects required input values before activating a skill; values interpolated into system prompt via `{variable}` syntax
+- [x] Tools tab in dashboard — skills library with browse/create/import/edit/delete; tool-capable model reference
+- [x] Active skill selector in Chat tab header — skill system prompt injected automatically on every message
+- [x] Tool-capable model badges in Tools tab
+
+---
+
+## 🔨 v0.9.5 — MCP bridge + Artifact panel + Web search
+
+> Goal: connect to MCP servers, give the model web search, render generated content in a side panel.
+
+- [ ] MCP bridge — `POST /api/mcp/connect`, `GET /api/mcp/tools`, `POST /api/mcp/call`; manages HTTP/SSE connections to MCP servers
+- [ ] MCP panel in Tools tab — add/remove MCP servers, see connection status, browse available tools
+- [ ] Auto-inject connected MCP tools into chat requests when a capable model is selected
+- [ ] Built-in web search tool — DuckDuckGo or Brave Search API, usable by any tool-capable model
+- [ ] Tool-call indicator in chat — "Calling web_search…" animation during tool execution
+- [ ] Artifact/preview side panel — renders generated markdown, code, and documents outside the chat bubble (like Claude's artifact panel)
 
 ---
 

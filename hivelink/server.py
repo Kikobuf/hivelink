@@ -401,6 +401,12 @@ class ChatRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 1024
     top_p: float = 1.0
+    # v0.9 — tool calling
+    tools: list[dict] | None = None
+    tool_choice: str | dict | None = None
+    # v0.9 — skills
+    skill_id: str | None = None
+    skill_inputs: dict | None = None   # values for skill elicitation fields
 
 
 async def _find_inference_port() -> int:
@@ -419,16 +425,43 @@ async def _find_inference_port() -> int:
 
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatRequest):
+    from . import skills as _skills
+
     port      = await _find_inference_port()
     llama_url = f"http://127.0.0.1:{port}/v1/chat/completions"
-    payload   = {
+
+    # ── Skill injection ────────────────────────────────────────────────────────
+    # If a skill_id is provided, resolve its system prompt (with any input values
+    # interpolated) and prepend it as a system message. If the first message is
+    # already a system message from the client, the skill takes precedence.
+    messages = [m.model_dump() for m in req.messages]
+    if req.skill_id:
+        skill_system = _skills.resolve_system_prompt(
+            req.skill_id,
+            req.skill_inputs or {},
+        )
+        if skill_system:
+            # Remove any existing system message so we don't double-inject
+            messages = [m for m in messages if m.get("role") != "system"]
+            messages = [{"role": "system", "content": skill_system}] + messages
+
+    payload: dict = {
         "model":       req.model,
-        "messages":    [m.model_dump() for m in req.messages],
+        "messages":    messages,
         "stream":      req.stream,
         "temperature": req.temperature,
         "max_tokens":  req.max_tokens,
         "top_p":       req.top_p,
     }
+
+    # ── Tool calling passthrough ───────────────────────────────────────────────
+    # Ollama natively supports OpenAI-compatible tool calling for capable models
+    # (Qwen2.5, Llama3.1+, Mistral). We pass tools/tool_choice straight through.
+    if req.tools:
+        payload["tools"] = req.tools
+    if req.tool_choice is not None:
+        payload["tool_choice"] = req.tool_choice
+
     if req.stream:
         async def gen() -> AsyncGenerator[bytes, None]:
             try:
@@ -901,3 +934,70 @@ async def sync_status(model_id: str):
 async def health():
     return {"status": "ok", "node_id": _node_id[:8], "ts": time.time()}
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Skills API (v0.9)
+# ═══════════════════════════════════════════════════════════════════════════
+
+from . import skills as _skills_module
+
+
+class SkillCreateRequest(BaseModel):
+    name: str
+    description: str = ""
+    author: str = ""
+    version: str = "1.0.0"
+    trigger: str = ""
+    system: str
+    inputs: list[dict] = []
+    source_url: str = ""
+
+
+class SkillImportRequest(BaseModel):
+    url: str
+
+
+class SkillUpdateRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    trigger: str | None = None
+    system: str | None = None
+    inputs: list[dict] | None = None
+
+
+@app.get("/api/skills")
+async def get_skills():
+    return {"skills": _skills_module.list_skills()}
+
+
+@app.post("/api/skills")
+async def create_skill_endpoint(req: SkillCreateRequest):
+    skill = _skills_module.create_skill(req.model_dump())
+    return {"skill": skill}
+
+
+@app.put("/api/skills/{skill_id}")
+async def update_skill_endpoint(skill_id: str, req: SkillUpdateRequest):
+    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    skill = _skills_module.update_skill(skill_id, data)
+    if not skill:
+        raise HTTPException(404, f"Skill '{skill_id}' not found")
+    return {"skill": skill}
+
+
+@app.delete("/api/skills/{skill_id}")
+async def delete_skill_endpoint(skill_id: str):
+    if not _skills_module.delete_skill(skill_id):
+        raise HTTPException(404, f"Skill '{skill_id}' not found")
+    return {"status": "deleted", "skill_id": skill_id}
+
+
+@app.post("/api/skills/import")
+async def import_skill_endpoint(req: SkillImportRequest):
+    try:
+        skill = await _skills_module.import_from_url(req.url)
+        return {"skill": skill}
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(400, f"Failed to fetch skill: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(400, f"Import failed: {str(e)[:120]}")

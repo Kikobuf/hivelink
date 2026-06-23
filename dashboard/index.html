@@ -210,6 +210,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .model-launch-btn:hover{background:var(--accent);color:#fff}
 .model-launch-btn.running{background:#0d7e4318;border-color:#3fb95044;color:#3fb950;cursor:default}
 .model-launch-btn.launching{background:#bf8b2e18;border-color:#e3b34144;color:#e3b341;cursor:default}
+/* Skills */
+.skill-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)}
+.skill-row:last-child{border-bottom:none}
+.skill-info{flex:1;min-width:0}
+.skill-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.skill-desc{font-size:11px;color:var(--muted);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-trigger{font-size:9px;font-family:var(--mono);color:var(--muted2);margin-top:3px}
+.skill-source{font-size:9px;color:var(--muted2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-actions{display:flex;gap:6px;flex-shrink:0}
+.skill-btn{font-size:10px;padding:3px 8px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);cursor:pointer;transition:all .15s}
+.skill-btn:hover{border-color:var(--accent);color:var(--accent)}
+.skill-btn.danger:hover{border-color:#f0838344;color:#f08383}
+.skill-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:600}
+.elicit-field-label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+.elicit-field-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box}
 .model-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .model-logo{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
 .model-name{font-size:13px;font-weight:600;color:var(--text)}
@@ -407,6 +422,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="nav-item" data-page="hardware"><span class="nav-icon"><i class="fa-solid fa-microchip"></i></span> Hardware</div>
   <div class="nav-item" data-page="models"><span class="nav-icon"><i class="fa-solid fa-cube"></i></span> Models</div>
   <div class="nav-item" data-page="chat"><span class="nav-icon"><i class="fa-regular fa-comment"></i></span> Chat</div>
+  <div class="nav-item" data-page="tools"><span class="nav-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span> Tools</div>
   <div class="nav-item" data-page="api"><span class="nav-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></span> API</div>
   <div class="nav-item" data-page="install"><span class="nav-icon"><i class="fa-solid fa-download"></i></span> Setup</div>
   <div class="sidebar-sep"></div>
@@ -529,7 +545,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <!-- Chat page -->
 <div class="page" id="page-chat">
-  <div class="page-header"><div class="page-title">Chat</div><div class="page-sub">Responses stream directly from your local models</div></div>
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+    <div><div class="page-title">Chat</div><div class="page-sub">Responses stream directly from your local models</div></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--muted)">Skill:</span>
+      <select id="active-skill-select" onchange="onSkillChange()"
+        style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:11px;padding:3px 8px;cursor:pointer;max-width:160px">
+        <option value="">— none —</option>
+      </select>
+    </div>
+  </div>
   <div class="chat-layout">
     <div class="card chat-wrap">
       <div class="chat-toolbar">
@@ -580,6 +605,108 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </div>
 
 <!-- API page -->
+<div class="page" id="page-tools">
+  <div class="page-header"><div class="page-title">Tools</div><div class="page-sub">Skills and tool calling for your local models</div></div>
+
+  <!-- Skills panel -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span><i class="fa-solid fa-bolt" style="font-size:10px;margin-right:6px;color:var(--accent)"></i>Skills</span>
+      <div style="display:flex;gap:8px">
+        <button class="pull-btn" onclick="openImportSkillModal()" style="font-size:11px;padding:4px 10px"><i class="fa-solid fa-link" style="font-size:10px"></i> Import URL</button>
+        <button class="pull-btn" onclick="openCreateSkillModal()" style="font-size:11px;padding:4px 10px"><i class="fa-solid fa-plus" style="font-size:10px"></i> Create</button>
+      </div>
+    </div>
+    <div style="padding:0 16px 12px">
+      <div id="skills-list"><div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px">No skills yet — create one or import from a URL.</div></div>
+    </div>
+  </div>
+
+  <!-- Tool-capable models info -->
+  <div class="card">
+    <div class="card-header"><i class="fa-solid fa-circle-info" style="font-size:10px;margin-right:6px;color:var(--muted)"></i>Tool-capable models</div>
+    <div style="padding:12px 16px;font-size:12px;color:var(--muted);line-height:1.7">
+      Not all local models handle function/tool calling reliably. Best results with:
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="badge badge-cuda" style="font-size:10px">qwen2.5:32b ✓</span>
+        <span class="badge badge-cuda" style="font-size:10px">qwen2.5:14b ✓</span>
+        <span class="badge badge-cuda" style="font-size:10px">qwen2.5:7b ✓</span>
+        <span class="badge badge-metal" style="font-size:10px">llama3.1:8b ✓</span>
+        <span class="badge badge-metal" style="font-size:10px">mistral:7b ✓</span>
+      </div>
+      <div style="margin-top:8px">Smaller or older models may hallucinate tool calls. qwen2.5:32b across your cluster is the most reliable option.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Import skill modal -->
+<div class="modal-overlay" id="import-skill-modal" style="display:none" onclick="if(event.target===this)closeImportSkillModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span>Import skill from URL</span><button class="modal-close" onclick="closeImportSkillModal()">✕</button></div>
+    <div style="padding:16px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Paste a URL to a skill file — supports JSON skill format or markdown (Vercel-style with YAML frontmatter).
+      </div>
+      <input type="text" id="import-skill-url" placeholder="https://raw.githubusercontent.com/..." 
+        style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box;margin-bottom:12px"/>
+      <div id="import-skill-error" style="color:var(--red);font-size:11px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="pull-btn" style="background:var(--surface2);border-color:var(--border2);color:var(--muted)" onclick="closeImportSkillModal()">Cancel</button>
+        <button class="pull-btn" id="import-skill-btn" onclick="importSkill()"><i class="fa-solid fa-download" style="font-size:10px"></i> Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create/edit skill modal -->
+<div class="modal-overlay" id="create-skill-modal" style="display:none" onclick="if(event.target===this)closeCreateSkillModal()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span id="create-skill-modal-title">Create skill</span><button class="modal-close" onclick="closeCreateSkillModal()">✕</button></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Name</label>
+        <input type="text" id="skill-name" placeholder="e.g. KB Rides Analyst"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box"/>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Description</label>
+        <input type="text" id="skill-description" placeholder="What does this skill do?"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box"/>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Trigger keywords <span style="color:var(--muted2)">(comma-separated)</span></label>
+        <input type="text" id="skill-trigger" placeholder="e.g. analyze, shopify, revenue"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box"/>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">System prompt</label>
+        <textarea id="skill-system" placeholder="You are an expert analyst for KB Rides..." rows="6"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text);font-size:12px;box-sizing:border-box;resize:vertical;font-family:var(--mono)"></textarea>
+      </div>
+      <div id="create-skill-error" style="color:var(--red);font-size:11px;display:none"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="pull-btn" style="background:var(--surface2);border-color:var(--border2);color:var(--muted)" onclick="closeCreateSkillModal()">Cancel</button>
+        <button class="pull-btn" id="save-skill-btn" onclick="saveSkill()"><i class="fa-solid fa-floppy-disk" style="font-size:10px"></i> Save skill</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Skill elicitation modal — shown when active skill has required inputs -->
+<div class="modal-overlay" id="skill-elicit-modal" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span id="skill-elicit-title">Skill setup</span><button class="modal-close" onclick="closeElicitModal()">✕</button></div>
+    <div style="padding:16px">
+      <div id="skill-elicit-description" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+      <div id="skill-elicit-fields" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="pull-btn" style="background:var(--surface2);border-color:var(--border2);color:var(--muted)" onclick="closeElicitModal()">Cancel</button>
+        <button class="pull-btn" onclick="confirmElicit()"><i class="fa-solid fa-bolt" style="font-size:10px"></i> Start chat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="page-api">
   <div class="page-header"><div class="page-title">API</div><div class="page-sub">OpenAI-compatible — works with any client</div></div>
   <div class="card" style="margin-bottom:16px">
@@ -1495,6 +1622,209 @@ function renderInstances(){
 // Poll instances on page load and every 15s (WS handles real-time updates)
 fetchInstances();
 setInterval(fetchInstances, 15000);
+
+// ── Skills ─────────────────────────────────────────────────────────────────────
+let skills = [];
+let activeSkillId = null;
+let activeSkillInputValues = {};
+let editingSkillId = null;
+let pendingElicitResolve = null;
+
+async function fetchSkills(){
+  try{
+    const res = await fetch(API_BASE+'/api/skills');
+    if(res.ok){ skills=(await res.json()).skills||[]; renderSkills(); updateSkillSelect(); }
+  }catch(_){}
+}
+
+function renderSkills(){
+  const list = document.getElementById('skills-list');
+  if(!list) return;
+  if(!skills.length){
+    list.innerHTML=`<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px">No skills yet — create one or import from a URL.</div>`;
+    return;
+  }
+  list.innerHTML = skills.map(s=>`
+    <div class="skill-row">
+      <div class="skill-info">
+        <div class="skill-name">${escapeHtml(s.name)}</div>
+        ${s.description?`<div class="skill-desc">${escapeHtml(s.description)}</div>`:''}
+        ${s.trigger?`<div class="skill-trigger">trigger: ${escapeHtml(s.trigger)}</div>`:''}
+        ${s.source_url?`<div class="skill-source">↗ ${escapeHtml(s.source_url)}</div>`:''}
+      </div>
+      <div class="skill-actions">
+        <button class="skill-btn ${activeSkillId===s.id?'active':''}" onclick="activateSkill('${s.id}')">
+          ${activeSkillId===s.id?'✓ Active':'Use'}
+        </button>
+        <button class="skill-btn" onclick="openEditSkillModal('${s.id}')">Edit</button>
+        <button class="skill-btn danger" onclick="deleteSkill('${s.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function updateSkillSelect(){
+  const sel = document.getElementById('active-skill-select');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— none —</option>' +
+    skills.map(s=>`<option value="${s.id}"${s.id===cur?' selected':''}>${escapeHtml(s.name)}</option>`).join('');
+  if(activeSkillId) sel.value = activeSkillId;
+}
+
+async function activateSkill(skillId){
+  const skill = skills.find(s=>s.id===skillId);
+  if(!skill) return;
+
+  // If skill has required inputs, show elicitation modal first
+  if(skill.inputs && skill.inputs.length > 0){
+    const values = await showElicitModal(skill);
+    if(values === null) return; // user cancelled
+    activeSkillInputValues = values;
+  } else {
+    activeSkillInputValues = {};
+  }
+
+  activeSkillId = skillId;
+  const sel = document.getElementById('active-skill-select');
+  if(sel) sel.value = skillId;
+  renderSkills();
+  // Switch to chat tab so the user sees it's active
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('[data-page="chat"]').classList.add('active');
+  document.getElementById('page-chat').classList.add('active');
+}
+
+function onSkillChange(){
+  const sel = document.getElementById('active-skill-select');
+  if(!sel) return;
+  const skillId = sel.value;
+  if(!skillId){ activeSkillId=null; activeSkillInputValues={}; renderSkills(); return; }
+  activateSkill(skillId);
+}
+
+// Elicitation modal
+function showElicitModal(skill){
+  return new Promise(resolve=>{
+    pendingElicitResolve = resolve;
+    document.getElementById('skill-elicit-title').textContent = skill.name;
+    document.getElementById('skill-elicit-description').textContent = skill.description || '';
+    const fields = document.getElementById('skill-elicit-fields');
+    fields.innerHTML = skill.inputs.map(inp=>`
+      <div>
+        <label class="elicit-field-label">${escapeHtml(inp.label||inp.id)}${inp.required?' *':''}</label>
+        <input class="elicit-field-input" type="text" id="elicit-${inp.id}"
+          placeholder="${escapeHtml(inp.placeholder||'')}" data-field-id="${inp.id}" data-required="${inp.required||false}"/>
+      </div>`).join('');
+    document.getElementById('skill-elicit-modal').style.display='flex';
+  });
+}
+
+function confirmElicit(){
+  const fields = document.querySelectorAll('#skill-elicit-fields input');
+  const values = {};
+  let valid = true;
+  fields.forEach(f=>{
+    const id = f.dataset.fieldId;
+    const required = f.dataset.required === 'true';
+    if(required && !f.value.trim()){ f.style.borderColor='var(--red)'; valid=false; }
+    else { f.style.borderColor=''; values[id]=f.value.trim(); }
+  });
+  if(!valid) return;
+  closeElicitModal();
+  if(pendingElicitResolve){ pendingElicitResolve(values); pendingElicitResolve=null; }
+}
+
+function closeElicitModal(){
+  document.getElementById('skill-elicit-modal').style.display='none';
+  if(pendingElicitResolve){ pendingElicitResolve(null); pendingElicitResolve=null; }
+}
+
+// Import skill modal
+function openImportSkillModal(){
+  document.getElementById('import-skill-url').value='';
+  document.getElementById('import-skill-error').style.display='none';
+  document.getElementById('import-skill-modal').style.display='flex';
+}
+function closeImportSkillModal(){ document.getElementById('import-skill-modal').style.display='none'; }
+
+async function importSkill(){
+  const url = document.getElementById('import-skill-url').value.trim();
+  if(!url) return;
+  const btn = document.getElementById('import-skill-btn');
+  const err = document.getElementById('import-skill-error');
+  btn.disabled=true; btn.textContent='Importing…'; err.style.display='none';
+  try{
+    const res = await fetch(API_BASE+'/api/skills/import',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url})
+    });
+    const data = await res.json();
+    if(!res.ok){ err.textContent=data.detail||'Import failed'; err.style.display='block'; }
+    else{ closeImportSkillModal(); await fetchSkills(); }
+  }catch(e){ err.textContent='Network error'; err.style.display='block'; }
+  btn.disabled=false; btn.textContent='Import';
+}
+
+// Create/edit skill modal
+function openCreateSkillModal(){
+  editingSkillId = null;
+  document.getElementById('create-skill-modal-title').textContent='Create skill';
+  document.getElementById('skill-name').value='';
+  document.getElementById('skill-description').value='';
+  document.getElementById('skill-trigger').value='';
+  document.getElementById('skill-system').value='';
+  document.getElementById('create-skill-error').style.display='none';
+  document.getElementById('create-skill-modal').style.display='flex';
+}
+
+function openEditSkillModal(skillId){
+  const skill = skills.find(s=>s.id===skillId);
+  if(!skill) return;
+  editingSkillId = skillId;
+  document.getElementById('create-skill-modal-title').textContent='Edit skill';
+  document.getElementById('skill-name').value=skill.name||'';
+  document.getElementById('skill-description').value=skill.description||'';
+  document.getElementById('skill-trigger').value=skill.trigger||'';
+  document.getElementById('skill-system').value=skill.system||'';
+  document.getElementById('create-skill-error').style.display='none';
+  document.getElementById('create-skill-modal').style.display='flex';
+}
+
+function closeCreateSkillModal(){ document.getElementById('create-skill-modal').style.display='none'; }
+
+async function saveSkill(){
+  const name = document.getElementById('skill-name').value.trim();
+  const system = document.getElementById('skill-system').value.trim();
+  const err = document.getElementById('create-skill-error');
+  if(!name||!system){ err.textContent='Name and system prompt are required'; err.style.display='block'; return; }
+  err.style.display='none';
+  const body = {
+    name, system,
+    description: document.getElementById('skill-description').value.trim(),
+    trigger: document.getElementById('skill-trigger').value.trim(),
+  };
+  const btn = document.getElementById('save-skill-btn');
+  btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const url = editingSkillId ? `${API_BASE}/api/skills/${editingSkillId}` : `${API_BASE}/api/skills`;
+    const method = editingSkillId ? 'PUT' : 'POST';
+    const res = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data = await res.json();
+    if(!res.ok){ err.textContent=data.detail||'Save failed'; err.style.display='block'; }
+    else{ closeCreateSkillModal(); await fetchSkills(); }
+  }catch(e){ err.textContent='Network error'; err.style.display='block'; }
+  btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk" style="font-size:10px"></i> Save skill';
+}
+
+async function deleteSkill(skillId){
+  if(!confirm('Delete this skill?')) return;
+  await fetch(API_BASE+'/api/skills/'+skillId,{method:'DELETE'});
+  if(activeSkillId===skillId){ activeSkillId=null; activeSkillInputValues={}; }
+  await fetchSkills();
+}
+
+fetchSkills();
 // ── Sharding state ────────────────────────────────────────────────────────────
 let shardingMode='pipeline';
 let minNodes=1;
@@ -1938,10 +2268,13 @@ async function sendMessage(){
   },300);
 
   const systemMsg=cfg.system.trim()?[{role:'system',content:cfg.system}]:[];
+  const messagesWithSystem = activeSkillId ? chatHistory : [...systemMsg,...chatHistory];
   try{
+    const payload={model,messages:messagesWithSystem,stream:true,temperature:cfg.temperature,max_tokens:cfg.max_tokens,top_p:cfg.top_p};
+    if(activeSkillId){ payload.skill_id=activeSkillId; payload.skill_inputs=activeSkillInputValues; }
     const res=await fetch(`${API_BASE}/v1/chat/completions`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:[...systemMsg,...chatHistory],stream:true,temperature:cfg.temperature,max_tokens:cfg.max_tokens,top_p:cfg.top_p})
+      body:JSON.stringify(payload)
     });
     if(!res.ok){
       const err=await res.json().catch(()=>({detail:'Unknown error'}));
